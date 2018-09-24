@@ -1,5 +1,6 @@
 # Title of your blog; shows in the header
 name: "Cameron Lonsdale"
+tagline: "Breen there; Hacked that."
 
 # Description of your content (will only be used on Google Search)
 description: "Fluid, responsive blog theme for Jekyll"

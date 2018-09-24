@@ -20,35 +20,15 @@
         <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
     <![endif]-->
 
-    <div class="off-canvas">
-      <figure class="avatar">
-        <img src="{{ site.baseurl }}/assets/img/avatar.jpg" alt="Picture" title="That's me, {{ site.author }}.">
-      </figure>
-      <div class="bio">
-          <h1>Hi, I'm {{ site.author }}.</h1>
-          <p>{{ site.author-bio }}</p>
-      </div>
-      <nav>
-        <h6>Follow me on</h6>
-        <ul>
-          {% if site.twitter %}
-          <li><a target="_blank" href="https://twitter.com/{{ site.twitter }}">Twitter</a></li>
-          {% endif %}
-          {% if site.github %}
-          <li><a target="_blank" href="https://github.com/{{ site.github }}">Github</a></li>
-          {% endif %}
-        </ul>
-      </nav>
-    </div>
-
-
     <div class="site-wrapper">
-
       <header>
-        <div class="h-wrap">
+        <div class="h-wrap" style="text-align: center;">
           <h1 class="title"><a href="{{ site.baseurl | split:'/' | join:'/' | append:'/'  }}" title="Back to Homepage">{{ site.name }}</a></h1>
-          <a class="menu-icon" title="Open Bio"><span class="lines"></span></a>
-        </div>
+          <div style="font-size: small; padding-top: 10px;">{{ site.tagline }}</div>
+          <div style="justify-content: center; align-items: center; display: flex; list-style: none;">
+            <li style="padding-top: 20px; padding-right: 10px"><a style="text-decoration: none;" target="_blank" href="https://twitter.com/{{ site.twitter }}">Twitter</a></li>
+            <li style="padding-top: 20px; padding-left: 10px"><a style="text-decoration: none;" target="_blank" href="https://github.com/{{ site.github }}">GitHub</a></li>
+          </ul>
       </header>
 
       <main>
@@ -56,7 +36,7 @@
       </main>
 
       <footer>
-        <small>Powered by Jekyll - Theme: <a href="https://github.com/m3xm/hikari-for-Jekyll">hikari</a> - &copy; {{ site.author }}</small>
+        <small>If you find a mistake, correct it with a <a href="https://github.com/CameronLonsdale/cameronlonsdale.github.io">pull request</a></small>
       </footer>
 
     </div>
