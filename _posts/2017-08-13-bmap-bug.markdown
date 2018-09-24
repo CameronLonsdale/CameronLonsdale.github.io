@@ -1,0 +1,119 @@
+---
+layout: post
+title:  "bmap bug"
+date:   2017-08-13
+---
+
+{% highlight text %}
+$ ./bmap --help 
+invalid option: --help
+try '--help' for help
+{% endhighlight %}
+
+If you have this bug you can download the fix [here](https://github.com/CameronLonsdale/bmap)!
+
+# Introduction
+
+Bmap is a data hiding tool that can utilize slack space in blocks to hide data. It was also last maintained in 2000 and didn't want to work on my computer in 2017.
+
+As per instructions, run `make` to build from source. Success! However, I then tried to run help.
+
+
+{% highlight text %}
+$ ./bmap --help 
+invalid option: --help
+try '--help' for help
+{% endhighlight %}
+
+Oh, well.. uh.. what?
+
+At first I thought it was the build setup, you know, computers have changed a bit in 17 years maybe something was outdated. But after playing about for a couple of hours and manually recompiling with certain options there was no change.
+
+I then tried to look at the source code and debug.
+
+# All the options!
+
+Here's part of the data for the hard coded options:
+
+{% highlight c linenos %}
+static struct mft_option options[]={
+    {"doc","autogenerate document ...",
+        MOT_VENUM|MOF_SILENT,
+        MO_VENUM_CAST{
+            {"version","display version and exit",
+                1, 2
+            },
+            {"help","display options and exit",
+                3, 4
+            },
+            {"man","generate man page and exit",
+                MOF_HIDDEN,MO_INT_CAST(BMAP_MAN)
+            },
+            {"sgml","generate SGML invocation info",
+                MOF_HIDDEN,MO_INT_CAST(BMAP_SGML)
+            },
+            {NULL,NULL,0,MO_CAST(NULL)}
+    }
+},
+{% endhighlight %}
+
+(The 1,2,3,4 constants on line 5 and 6 have been modified for demonstration)
+Yep, there's flags and macros, Oh goodie. Where is this being parsed / matched?
+
+{% highlight c linenos %}
+venum_walk=(struct mft_option \*)(option_walk->defval.d_venum);
+while(venum_walk && venum_walk->name)
+{
+    mft_logf(MLOG_PROGRESS,"checking against %s",venum_walk->name);
+    if(!strcmp(venum_walk->name,key))
+    {
+        mft_logf(MLOG_PROGRESS,"matched against an venum val");
+        val=key;
+    }
+    venum_walk++;
+}
+{% endhighlight %}
+
+# Struct alignment conundrum
+
+Ah yes, here. So what names are being printed out?
+
+{% highlight text %}
+checking against version
+{% endhighlight %}
+
+Thats it? but there's 4 defined options!
+
+{% highlight text %}
+name: version
+desc: display version and exit
+type: 0
+defval: 0
+
+name: (null)
+desc: help
+type: 4218998
+defval: 0
+{% endhighlight %}
+
+That's not good, "help" should be the name, not the description, how did that get unaligned?
+
+{% highlight text %}
+size of struct mft_venum: 24
+{% endhighlight %}
+
+It's 24 bytes, but the data from the initial option array is packed into 32 bytes!
+
+{% highlight text %}
+name_ptr: 5060400000000000
+desc_ptr: 5860400000000000
+type: 0100000000000000
+defval: 0200000000000000
+{% endhighlight %}
+
+Because of this, the defval is treated as the start of the next entry
+`name: 0x2`
+
+# Fix - Computers are hard
+
+At first I didn't know why this was happening; I tried to think of all the changes computers have gone through in 17 years, then I thought about architecture. My machine is 64-bit, but the original author in 1998 probably had a 32-bit machine. So forcing gcc to compile for 32-bit mode fixes the alignment issue and all is well! Now I can hide data in slack space, thanks for the tool Daniel!
