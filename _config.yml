@@ -22,7 +22,6 @@ github: cameronlonsdale
 
 markdown: kramdown
 permalink: pretty
-highlighter: rouge
 
 paginate: 10
 paginate_path: "/page/:num"
