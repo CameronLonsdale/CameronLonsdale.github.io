@@ -14,9 +14,9 @@ If you have this bug you can download the fix [here](https://github.com/CameronL
 
 # Introduction
 
-Bmap is a data hiding tool that can utilize slack space in blocks to hide data. It was also last maintained in 2000 and didn't want to work on my computer in 2017.
+_bmap_ is a data hiding tool that can utilize slack space in blocks to hide data. It was also last maintained in 2000 and didn't want to work on my computer in 2017.
 
-As per instructions, run `make` to build from source. Success! However, I then tried to run help.
+As per instructions, run <code class="inline-highlight">make</code> to build from source. Success! However, I then tried to get help.
 
 
 {% highlight text %}
@@ -56,11 +56,11 @@ static struct mft_option options[]={
     }
 },
 {% endhighlight %}
+The 1,2,3,4 constants on line 5 and 6 have been modified for demonstration
 
-(The 1,2,3,4 constants on line 5 and 6 have been modified for demonstration)
-Yep, there's flags and macros, Oh goodie. Where is this being parsed / matched?
+Yep, there's flags and macros, Oh goodie. Where is this being parsed and matched?
 
-{% highlight c linenos %}
+{% highlight c %}
 venum_walk=(struct mft_option \*)(option_walk->defval.d_venum);
 while(venum_walk && venum_walk->name)
 {
@@ -82,7 +82,7 @@ Ah yes, here. So what names are being printed out?
 checking against version
 {% endhighlight %}
 
-Thats it? but there's 4 defined options!
+That's it? but there's 4 defined options!
 
 {% highlight text %}
 name: version
@@ -112,8 +112,8 @@ defval: 0200000000000000
 {% endhighlight %}
 
 Because of this, the defval is treated as the start of the next entry
-`name: 0x2`
+<code class="inline-highlight">name: 0x2</code>
 
 # Fix - Computers are hard
 
-At first I didn't know why this was happening; I tried to think of all the changes computers have gone through in 17 years, then I thought about architecture. My machine is 64-bit, but the original author in 1998 probably had a 32-bit machine. So forcing gcc to compile for 32-bit mode fixes the alignment issue and all is well! Now I can hide data in slack space, thanks for the tool Daniel!
+At first I didn't know why this was happening; I tried to think of all the changes computers have gone through in 17 years, then I thought about architecture. My machine is 64-bit, but the original author in 1998 probably had a 32-bit machine. So forcing gcc to compile for 32-bit mode fixes the alignment issue and all is well! Now I can hide data in slack space, thanks for the tool Daniel Ridge!

@@ -1,10 +1,13 @@
 // Solarized Light Pygments CSS / Jekyll
 // https://gist.github.com/edwardhotchkiss/2005058
 
-.highlight {
+.inline-highlight {
+  padding: 2px;
+}
+
+.highlight, .inline-highlight {
   border: 1px solid $border-color;
   border-radius: 3px;
-  padding: 0;
   background-color: $smoke-color;
   font-size: 80%;
   margin: $spacing-m auto;
