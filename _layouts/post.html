@@ -3,7 +3,7 @@ layout: default
 ---
 
 <section class="single-wrap">
-  <article class="single-content" itemscope itemtype="http://schema.org/BlogPosting">
+  <article class="single-content" itemscope itemtype="https://schema.org/BlogPosting">
     <div class="feat">
       <h5 class="page-date" style="margin-top: 0">
         <time datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">
@@ -16,7 +16,7 @@ layout: default
       {{ content }}
     </div>
     <div class="feat share">
-      <a href="http://twitter.com/share?url={{ site.url }}{{ page.url }}&text=@{{ site.twitter }}" class="popup">
+      <a href="https://twitter.com/share?url={{ site.url }}{{ page.url }}&text=@{{ site.twitter }}" class="popup">
         <span class="icon-twitter"></span>
       </a>
     </div>
