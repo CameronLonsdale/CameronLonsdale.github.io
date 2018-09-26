@@ -19,6 +19,11 @@ author-bio: "I'm a dog. I develop things. This is my blog so why don't you close
 twitter: myoutpost
 github: cameronlonsdale
 
+# Google Analytics (you may want to changes these with yours or even delete :)
+
+ga_domain: cameronlonsdale.com
+ga_tracking_id: UA-126478009-1
+
 # Other (refer to https://jekyllrb.com/docs/home/ for further details on the below)
 
 markdown: kramdown
