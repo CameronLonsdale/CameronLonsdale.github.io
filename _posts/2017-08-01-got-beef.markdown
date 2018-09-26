@@ -1,0 +1,9 @@
+---
+layout: post
+title:  "Presentation - Got BeEf?"
+date:   2017-08-01
+---
+
+**Note**: If you’re using privacy badger, check that speakerdeck.com is not blocked
+
+<script async class="speakerdeck-embed" data-id="e7aa73e42edf4217a9b1aa7b41ef9921" data-ratio="1.33333333333333" src="//speakerdeck.com/assets/embed.js"></script>
