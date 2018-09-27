@@ -1,6 +1,7 @@
 # Custom
 _site
 .sass-cache
+.DS_store
 
 *.gem
 *.rbc
