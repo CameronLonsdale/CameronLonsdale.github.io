@@ -4,7 +4,7 @@ title:  "How does FTK Imager snapshot memory?"
 date:   2017-08-06
 ---
 
-I was recently introduced to the [FTK Imager](http://accessdata.com/products-services/forensic-toolkit-ftk) program in my digital forensics class. As I was using I began wondering, how can this program see all of RAM? According to my Operating Systems knowledge, programs are limited to their own virtual memory, therefore it must have to contact the kernel in order to read other parts of memory. If so, that's a fairly worrying privilege, so how does it work?
+I was recently introduced to the [FTK Imager](https://accessdata.com/products-services/forensic-toolkit-ftk) program in my digital forensics class. As I was using I began wondering, how can this program see all of RAM? According to my Operating Systems knowledge, programs are limited to their own virtual memory, therefore it must have to contact the kernel in order to read other parts of memory. If so, that's a fairly worrying privilege, so how does it work?
 
 
 I did a very basic analysis, unfortunately I can't spend more time on it because my Advanced Operating Systems subject is my life now, but here's what I found.
