@@ -4,6 +4,32 @@ title:  "Periodic Substitution Cipher Automated Cryptanalysis"
 date:   2017-06-30
 ---
 
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+      config: ["MMLorHTML.js"],
+      extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js"],
+      jax: ["input/TeX"],
+      tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+          processEscapes: false
+      },
+      TeX: {
+          TagSide: "right",
+          TagIndent: ".8em",
+          MultLineWidth: "85%",
+          equationNumbers: {
+             autoNumber: "AMS",
+          },
+          unicode: {
+             fonts: "STIXGeneral,'Arial Unicode MS'"
+          }
+      },
+      showProcessingMessages: false
+  });
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
 Periodic Substitution Ciphers are a type of polyalphabetic substitution cipher where the key sequence is repeated after a period of p plaintext symbols. The encryption transformation can be expressed as a set of mapping functions corresponding to the p different keys $K = k_{1}, ..., k_{p}$:
 
 <center>
