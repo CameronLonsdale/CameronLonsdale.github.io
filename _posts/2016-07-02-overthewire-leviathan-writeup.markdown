@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "OverTheWire Leviathan: Write-up"
-date:   2016-06-02
+date:   2016-07-03
 ---
 
 This is a detailed write-up of my solutions to problems 0 – 6 for the [Leviathan wargame](http://overthewire.org/wargames/leviathan/), the next difficulty up from [Bandit](https://cameronlonsdale.wordpress.com/2015/12/06/overthewire-bandit-write-up/). All passwords have been censored out of respect for the wargame and future players.
