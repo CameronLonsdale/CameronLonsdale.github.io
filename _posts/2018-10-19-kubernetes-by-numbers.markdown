@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Kubernetes by Numbers"
-date:   2017-10-19
+date:   2018-10-19
 ---
 
 This is a Kubernetes tutorial meant to be used as an accompanying resource for a workshop. If you're looking for a more guided tutorial, I recommend going through the [Kubernetes Bootcamp](https://kubernetesbootcamp.github.io/kubernetes-bootcamp/index.html)
