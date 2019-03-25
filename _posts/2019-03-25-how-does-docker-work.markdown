@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "How does Docker work?"
-date:   2019-25-03
+date:   2019-03-25
 ---
 
 How does Docker _actually_ work? It's a simple question that has a surprisingly complex answer. You've probably heard the words "daemon" and "runtime" thrown around in documentation and other blog posts, but never really understood what they were and how they fit together. If you're like me and went wading through the source code to uncover the truth, I can understand if you got lost in the sea of code. Let's face it, if Docker source code was a meal, you'd be chowing down on a huge bowl of spaghetti. 
@@ -10,7 +10,9 @@ Like a fork guiding pasta to your mouth, this post will group and guide the stra
 
 In order to better understand the present, we first need to look at the past. In 2013 Solomon Hykes of [dotCloud](https://www.crunchbase.com/organization/dotcloud#section-overview) revealed Docker to the public at the PyCon talk [_The future of Linux Containers_](https://www.youtube.com/watch?v=wW9CAH9nSLs). Let's revert his [git respository](https://github.com/moby/moby/tree/bba4e368077cbc73db2a12c259c5fc2330dffe75) to January of 2013, to a simpler time in Docker's development.
 
-> Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time
+<div class="padded-highlight">
+	<pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time</pre>
+</div>
 
 # How did Docker work in 2013
 
