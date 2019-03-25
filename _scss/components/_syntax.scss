@@ -5,7 +5,14 @@
   padding: 2px;
 }
 
-.highlight, .inline-highlight {
+
+.padded-highlight {
+  pre {
+    white-space: pre-wrap;
+  }
+}
+
+.highlight, .inline-highlight, .padded-highlight {
   border: 1px solid $border-color;
   border-radius: 3px;
   background-color: $smoke-color;
