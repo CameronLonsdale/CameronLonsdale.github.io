@@ -4,14 +4,14 @@ title:  "How does Docker work?"
 date:   2019-03-25
 ---
 
-How does Docker _actually_ work? It's a simple question that has a surprisingly complex answer. You've probably heard the words "daemon" and "runtime" thrown around in documentation and other blog posts, but never really understood what they were and how they fit together. If you're like me and went wading through the source code to uncover the truth, I can understand if you got lost in the sea of code. Let's face it, if Docker source code was a meal, you'd be chowing down on a huge bowl of spaghetti. 
+How does Docker _actually_ work? It's a simple question that has a surprisingly complex answer. You've probably heard the words "daemon" and "runtime" thrown around in documentation and other blog posts, but never really understood what they were and how they fit together. If you're like me and went wading through the source code to uncover the truth, I can understand if you got lost in the sea of code. Let's face it, if Docker source code was a meal, you'd be chowing down on a big bowl of spaghetti. 
 
-Like a fork guiding pasta to your mouth, this post will group and guide the strands of Docker to your hungry mind.
+Like a fork guiding pasta to your mouth, this post will group and guide the strands of Docker into your hungry mind.
 
 In order to better understand the present, we first need to look at the past. In 2013 Solomon Hykes of [dotCloud](https://www.crunchbase.com/organization/dotcloud#section-overview) revealed Docker to the public at the PyCon talk [_The future of Linux Containers_](https://www.youtube.com/watch?v=wW9CAH9nSLs). Let's revert his [git respository](https://github.com/moby/moby/tree/bba4e368077cbc73db2a12c259c5fc2330dffe75) to January of 2013, to a simpler time in Docker's development.
 
 <div class="padded-highlight">
-	<pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time</pre>
+    <pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time</pre>
 </div>
 
 # How did Docker work in 2013
@@ -22,13 +22,25 @@ OVERVIEW
 
 ### Command-line Application
 
-The Docker command line application is your interface to control containers managed by Docker. It's relatively simple as all of the controlling is done by the _dockerd_ component. In the main function, it interprets commands from the user and sends them to the docker daemon. An HTTP Request is made to the address stored in the DOCKER environment variable (default value: SOMETHING).  
+The Docker command-line application is the human interface to managing all images and containers known to Docker. It's relatively simple since all of the management is done by the _dockerd_ component. The app starts at the [main function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker/docker.go#L161):
 
-<https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker/docker.go>
+{% highlight go %}
+func main() {
+    var err error
+    ...
+    conn, err := rcli.CallTCP(os.Getenv("DOCKER"), os.Args[1:]...)
+    ...
+    receive_stdout := future.Go(func() error {
+        _, err := io.Copy(os.Stdout, conn)
+        return err
+    })
+    ...
+}
+{% endhighlight %}
 
-When dockerd replies with results, the command line application will display these to the user.
+Immediately, a TCP connection is established to an address which is stored in the environment variable _DOCKER_, this is the address of the Docker daemon. The user supplied arguments are sent, and the app is now waiting to print out the results from a succesful reply.
 
-### Daemon
+### Dockerd
 
 The component known as the "daemon" ... PURPOSE
 
