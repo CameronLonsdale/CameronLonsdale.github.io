@@ -20,9 +20,9 @@ DIAGRAM
 
 OVERVIEW
 
-### Command-line Application
+## Command-line Application
 
-The Docker command-line application is the human interface to managing all images and containers known to Docker. It's relatively simple since all of the management is done by the _dockerd_ component. The app starts at the [main function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker/docker.go#L161):
+The Docker command-line application is the human interface to managing all images and containers known to your running copy of Docker. It's relatively simple since all of the management is done by the _dockerd_ component. The app starts at the [main function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker/docker.go#L161):
 
 {% highlight go %}
 func main() {
@@ -40,7 +40,7 @@ func main() {
 
 Immediately, a TCP connection is established to an address which is stored in the environment variable _DOCKER_, this is the address of the Docker daemon. The user supplied arguments are sent, and the app is now waiting to print out the results from a succesful reply.
 
-### Dockerd
+## dockerd
 
 In the same repo lives the code for what's known as the docker daemon, or _dockerd_. Its job is to run in the background, listening for user's commands. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
 
@@ -83,9 +83,9 @@ func (srv *Server) CmdRun(stdin io.ReadCloser, stdout io.Writer, args ...string)
 }
 {% endhighlight %}
 
-The user will normally provide an image and command for dockerd to run. When they are omitted, the image "base" and command "/bin/bash -i" are used.
+The user will normally provide an image and command for dockerd to run. When they are omitted, the image <code class="inline-highlight">base</code> and command <code class="inline-highlight">/bin/bash -i</code> are used.
 
-Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system. In this version of docker all images are stored in the folder [/var/lib/docker/images](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/dockerd/dockerd.go#L687). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
+Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system (assuming an image already exists due to a previous <code class="inline-highlight">docker pull</code> command).
 
 {% highlight go %}
 // Find the image
@@ -95,39 +95,81 @@ if img == nil {
 }
 {% endhighlight %}
 
+{% highlight go %}
+type Index struct {
+    Path    string
+    ByName  map[string]*History
+    ById    map[string]*Image
+}
+
+func (index *Index) Find(idOrName string) *Image {
+    ...
+    // Lookup by ID
+    if image, exists := index.ById[idOrName]; exists {
+        return image
+    }
+    // Lookup by name
+    if history, exists := index.ByName[idOrName]; exists && history.Len() > 0 {
+        return (*history)[0]
+    }
+    return nil
+}
+{% endhighlight %}
+
+In this version of docker all images are stored in the folder [<code class="inline-highlight">/var/lib/docker/images</code>](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/dockerd/dockerd.go#L687). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
+
 Then we [create the container](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/docker.go#L49). _dockerd_ creates a structure to hold all the metadata related to this container, then stores it in a list for easy access.
 
-TODO NEED MORE EMBEDDED CODE HERE, DON"T WANT TO KEEP SWAPPING WINDOWS
+TODO: GO THROUGH SNIPPETS LIKE THIS AND COMMENT WHAT EXAMPLE VARIABLE VALUES SHOULD BE
 
-When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code> Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24) <code class="inline-highlight">/rootfs</code> to point to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a seperate read/write layer for the container to create temporary files.
+{% highlight go %}
+container := &Container{
+    Id:         id,
+    Root:       root,
+    Created:    time.Now(),
+    Path:       command,
+    Args:       args,
+    Config:     config,
+    Filesystem: newFilesystem(path.Join(root, "rootfs"), path.Join(root, "rw"), layers),
+    State:      newState(),
+
+    lxcConfigPath: path.Join(root, "config.lxc"),
+    stdout:        newWriteBroadcaster(),
+    stderr:        newWriteBroadcaster(),
+    stdoutLog:     new(bytes.Buffer),
+    stderrLog:     new(bytes.Buffer),
+}
+{% endhighlight %}
+
+When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code> Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24) <code class="inline-highlight">/rootfs</code> that's used to point to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a seperate read/write layer for the container to create temporary files.
 
 Last, an [LXC config file](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L175) is generated by filling in a [template](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/lxc_template.go) with our newly created container data. More on LXC in the next section.
 
 Our container is finally created! But it's not yet running, for that we need to [start](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L188) it.
 
-
 {% highlight go %}
 func (container *Container) Start() error {
     ...
+    params := []string{
+        "-n", container.Id,
+        "-f", container.lxcConfigPath,
+        "--",
+        container.Path,
+    }
+    params = append(params, container.Args...)
+
     container.cmd = exec.Command("/usr/bin/lxc-start", params...)
     ...
 }
 {% endhighlight %}
 
-TODO
+To start a container, _dockerd_ starts another program _lxc-start_ with the LXC template we just generated.
 
-Starting the container involves: 
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L255
+TODO: EXPLAIN LXC
 
-using lxc-start
+_dockerd_ will then monitor the container til completion, cleaning up any data not needed now that the container has finished
 
-in a seperate thread we then monitor the process in order to cleanup the contianer when it finishes; https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L334
-
-We then do a synchronisation block to wait until the container has finished running:
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L670
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/state.go#L57
-
-This only happens if you run a container in the foreground. If you want to run in the background, you just print the container ID and exit. 
+in a seperate thread we then [monitor](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L334) the process in order to cleanup the contianer when it finishes.
 
 # What's changed?
 
