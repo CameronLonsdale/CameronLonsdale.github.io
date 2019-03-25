@@ -42,52 +42,82 @@ Immediately, a TCP connection is established to an address which is stored in th
 
 ### Dockerd
 
-The component known as the "daemon" ... PURPOSE
+In the same repo lives the code for what's known as the docker daemon, or _dockerd_. Its job is to run in the background, listening for user's commands. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
 
-<https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go>
+{% highlight go %}
+func main() {
+    ...
+    go func() {
+        if err := rcli.ListenAndServeHTTP(":8080", d); err != nil {
+            log.Fatal(err)
+        }
+    }()
+    if err := rcli.ListenAndServeTCP(":4242", d); err != nil {
+        log.Fatal(err)
+    }
+}
+{% endhighlight %}
 
-The docker daemon lives here, the main function will start an HTTP listener on port 8080, and a TCP listener on port 4242
+Once a command has been [recieved](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L36), _dockerd_ will lookup the [function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L59) to be run using [reflection](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/types.go#L41), and then call it to perform the user's actions.
 
-<https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go>
+### docker run
 
-This will listen for requests and process them with a goroutine.
+One such function is [<code class="inline-highlight">CmdRun</code>](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L591), which corresponds to the <code class="inline-highlight">docker run</code> command.
 
-<https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/types.go>
+{% highlight go %}
+func (srv *Server) CmdRun(stdin io.ReadCloser, stdout io.Writer, args ...string) error {
+    flags := rcli.Subcmd(stdout, "run", "[OPTIONS] IMAGE COMMAND [ARG...]", "Run a command in a new container")
+    ...
+    // Choose a default image if needed
+    if name == "" {
+        name = "base"
+    }
+    // Choose a default command if needed
+    if len(cmd) == 0 {
+        *fl_stdin = true
+        *fl_tty = true
+        *fl_attach = true
+        cmd = []string{"/bin/bash", "-i"}
+    }
+    ...
+}
+{% endhighlight %}
 
-Using reflection, we find out what method we need to call in order to process the request. We then call it!
+The user will normally provide an image and command for dockerd to run. When they are omitted, the image "base" and command "/bin/bash -i" are used.
 
-### `docker run`
+Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system. In this version of docker all images are stored in the folder [/var/lib/docker/images](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/dockerd/dockerd.go#L687). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
 
-Let's call the run command
+{% highlight go %}
+// Find the image
+img := srv.images.Find(name)
+if img == nil {
+    return errors.New("No such image: " + name)
+}
+{% endhighlight %}
 
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L591
+Then we [create the container](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/docker.go#L49). _dockerd_ creates a structure to hold all the metadata related to this container, then stores it in a list for easy access.
 
-If we did not provide an image, we juse use "base". If we did not specify a command, we just run "/bin/bash -i".
+TODO NEED MORE EMBEDDED CODE HERE, DON"T WANT TO KEEP SWAPPING WINDOWS
 
-We find the image that was specified, whether by name or ID
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/image/image.go#L94
+When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code> Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24) <code class="inline-highlight">/rootfs</code> to point to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a seperate read/write layer for the container to create temporary files.
 
-and then we create the container.
+Last, an [LXC config file](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L175) is generated by filling in a [template](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/lxc_template.go) with our newly created container data. More on LXC in the next section.
 
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L527
-
-The code to create a container lives here:
-
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L50
-
-It does similar things to how linux containers are created. Makes a new root directory, various things about stdin and stdout.
-
-The config for this container is saved in config.json in the root directory! (Hey we've seen this file before!)
-
-we then create what's known as an LXCTemplate file, which we fill in with all the necessary variables that our container needs. The templated config file is here:
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/lxc_template.go#L7
-
-LXC is --- TODO
+Our container is finally created! But it's not yet running, for that we need to [start](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L188) it.
 
 
-Then back to our run command, we attach stdin and stdout, then finally we run our container:
+{% highlight go %}
+func (container *Container) Start() error {
+    ...
+    container.cmd = exec.Command("/usr/bin/lxc-start", params...)
+    ...
+}
+{% endhighlight %}
 
-https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L651
+
+
+TODOOOOOOO
+
 
 Starting the container involves: 
 https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L255
@@ -102,7 +132,7 @@ https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/state
 
 This only happens if you run a container in the foreground. If you want to run in the background, you just print the container ID and exit. 
 
-# Whats changed?
+# What's changed?
 
 how many lines of code changed?
 
@@ -111,7 +141,7 @@ So that was 2013, how does Docker work in 2018?
 runtime?
 shim?
 
-Open Container Initiatve started in 2015
+Open Container Initiatve started in 2015 because people wanted to create containers in other ways than just LXC
 
 # How does it work now
 
