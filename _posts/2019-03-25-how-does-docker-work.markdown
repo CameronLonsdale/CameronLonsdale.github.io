@@ -14,13 +14,13 @@ In order to better understand the present, we first need to look at the past. In
     <pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time</pre>
 </div>
 
-# How did Docker work in 2013
+# How did Docker work in 2013?
 
 TODO: FIX THIS IMAGE
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2013.png">
 
-Docker is composed of two main components, a command-line application for users and a daemon which tracks and manages containers. The daemon relies on two sub components to perform its job, storage on the host filesystem to store image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a linux container.
+Docker is composed of two main components, a command-line application for users and a daemon which tracks and manages containers. The daemon relies on two sub components to perform its job, storage on the host filesystem to store image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a Linux container.
 
 ## Command-line Application
 
@@ -45,7 +45,7 @@ Immediately, a TCP connection is established to an address which is stored in th
 
 ## dockerd
 
-In the same repo lives the code for what's known as the docker daemon, or _dockerd_. Its job is to run in the background, listening for user's commands. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
+In the same repo lives the code for what's known as the docker daemon, or _dockerd_. Its job is to run in the background, cleaning up containers, and processing user requests. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
 
 {% highlight go %}
 func main() {
@@ -89,11 +89,11 @@ func (srv *Server) CmdRun(stdin io.ReadCloser, stdout io.Writer, args ...string)
 }
 {% endhighlight %}
 
-The user will normally provide an image and command for dockerd to run. When they are omitted, the image <code class="inline-highlight">base</code> and command <code class="inline-highlight">/bin/bash -i</code> are used.
+The user will normally provide an image and command for _dockerd_ to run. When they are omitted, the image <code class="inline-highlight">base</code> and command <code class="inline-highlight">/bin/bash -i</code> are used.
 
 #### Find the image
 
-Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system (assuming an image already exists due to a previous <code class="inline-highlight">docker pull</code> command).
+Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system (assuming an image already exists due to a previous <code class="inline-highlight">docker pull</code>).
 
 {% highlight go %}
 // Find the image
@@ -124,30 +124,28 @@ func (index *Index) Find(idOrName string) *Image {
 }
 {% endhighlight %}
 
-In this version of docker all images are stored in the folder [<code class="inline-highlight">/var/lib/docker/images</code>](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/dockerd/dockerd.go#L687). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
+In this version of Docker all images are stored in the folder [<code class="inline-highlight">/var/lib/docker/images</code>](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/dockerd/dockerd.go#L687). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
 
 #### Create the container
 
 Then we [create the container](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/docker.go#L49). _dockerd_ creates a structure to hold all the metadata related to this container, then stores it in a list for easy access.
 
-TODO: GO THROUGH SNIPPETS LIKE THIS AND COMMENT WHAT EXAMPLE VARIABLE VALUES SHOULD BE
-
 {% highlight go %}
 container := &Container{
-    Id:         id,         // 09906fa3
-    Root:       root,       // TODO
+    Id:         id,         // "09906fa3"
+    Root:       root,       // "/var/lib/docker/containers/09906fa3/"
     Created:    time.Now(),
-    Path:       command,    // /bin/bash -i
+    Path:       command,    // "/bin/bash -i"
     Args:       args,
     Config:     config,
 
-    //  /var/lib/docker/containers/09906fa3/rootfs,
-    //  /var/lib/docker/containers/09906fa3/rw,
-    // LAYERS????
+    // "/var/lib/docker/containers/09906fa3/rootfs"
+    // "/var/lib/docker/containers/09906fa3/rw"
+    // TODO: LAYERS
     Filesystem: newFilesystem(path.Join(root, "rootfs"), path.Join(root, "rw"), layers),
     State:      newState(),
 
-    // TODO
+    // "/var/lib/docker/containers/09906fa3/confix.lxc"
     lxcConfigPath: path.Join(root, "config.lxc"),
     stdout:        newWriteBroadcaster(),
     stderr:        newWriteBroadcaster(),
@@ -156,7 +154,7 @@ container := &Container{
 }
 {% endhighlight %}
 
-When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code> Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24) <code class="inline-highlight">/rootfs</code> that's used to point to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a seperate read/write layer for the container to create temporary files.
+When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code>. Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24), <code class="inline-highlight">/rootfs</code> which points to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a seperate read/write layer for the container to create temporary files.
 
 Last, an [LXC config file](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L175) is generated by filling in a [template](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/lxc_template.go) with our newly created container data. More on LXC in the next section.
 
@@ -164,12 +162,12 @@ Last, an [LXC config file](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d59
 
 Our container is finally created! But it's not yet running, for that we need to [start](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L188) it.
 
-TODO: TALK ABOUT MOUNTING THE DIRECTORIES
-https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L189
-
 {% highlight go %}
 func (container *Container) Start() error {
-    ...
+    if err := container.Filesystem.EnsureMounted(); err != nil {
+        return err
+    }
+
     params := []string{
         "-n", container.Id,
         "-f", container.lxcConfigPath,
@@ -184,30 +182,54 @@ func (container *Container) Start() error {
 }
 {% endhighlight %}
 
-To start a container, _dockerd_ starts another program _lxc-start_ with the LXC template we just generated.
+TODO: TALK ABOUT MOUNTING THE DIRECTORIES
+https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L189
+
+To start a container, _dockerd_ runs another program _lxc-start_ with the LXC template we just generated.
 
 #### LXC
 
-TODO: EXPLAIN LXC
+[LXC](https://linuxcontainers.org/lxc/introduction/) (Linux Containers) is an abstraction layer which provides userspace applications with a simple API to create and manage containers. The truth is, containers are [not a real thing](https://blog.jessfraz.com/post/containers-zones-jails-vms/), there is no such object called a container inside the Linux Kernel. Containers are a collection of kernel objects that work together to provide process isolation. So what is a simple [<code class="inline-highlight">lxc-start</code>](https://linuxcontainers.org/lxc/manpages//man1/lxc-start.1.html#LXC) command actually translates into the setup and application of:
+
+* Kernel namespaces (ipc, uts, mount, pid, network and user)
+* Apparmor and SELinux profiles
+* Seccomp policies
+* Chroots (using pivot_root)
+* Kernel capabilities
+* and CGroups (control groups)
 
 #### Cleanup
 
-_dockerd_ will then [monitor](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L334) the container til completion, cleaning up any data not needed now that the container has finished.
+{% highlight go %}
+func (container *Container) monitor() {
+    // Wait for the program to exit
+    container.cmd.Wait()
+    exitCode := container.cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+
+    // Cleanup
+    container.stdout.Close()
+    container.stderr.Close()
+    if err := container.Filesystem.Umount(); err != nil {
+        log.Printf("%v: Failed to umount filesystem: %v", container.Id, err)
+    }
+
+    // Report status back
+    container.State.setStopped(exitCode)
+    container.save()
+}
+{% endhighlight %}
+
+Finally, _dockerd_ will then [monitor](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L334) the container til completion, cleaning up unnecessary data now that the container has finished.
 
 # What's changed?
 
-TODO
+It's been 6 years since the introduction of Docker, and the containerisation paradigm has exploded in popularity.
 
-how many lines of code changed?
+OPEN CONTAINER INITIATIVE 2015 (because people wanted to create containers in other ways than just LXC??)
 
-So that was 2013, how does Docker work in 2019?
+SOMETHING ABOUT THE SIZE OF THE DOCKER PROJECT
 
-runtime?
-shim?
-
-Open Container Initiatve started in 2015 because people wanted to create containers in other ways than just LXC
-
-# How does it work now
+# How does Docker work in 2019?
 
 TODO
 
