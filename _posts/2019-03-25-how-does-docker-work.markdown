@@ -8,10 +8,10 @@ How does Docker _actually_ work? It's a simple question that has a surprisingly 
 
 Like a fork that guides pasta to your mouth, this post will group and guide the digital strands of Docker into your hungry mind.
 
-In order to better understand the present, we first need to look at the past. In 2013 Solomon Hykes of [dotCloud](https://www.crunchbase.com/organization/dotcloud#section-overview) revealed Docker to the public at the PyCon talk [_The future of Linux Containers_](https://www.youtube.com/watch?v=wW9CAH9nSLs). Let's revert his [git respository](https://github.com/moby/moby/tree/bba4e368077cbc73db2a12c259c5fc2330dffe75) to January of 2013, to a simpler time in Docker's development.
+In order to better understand the present, we first need to look at the past. In 2013 Solomon Hykes of [dotCloud](https://www.crunchbase.com/organization/dotcloud#section-overview) revealed Docker to the public at the PyCon talk [_The future of Linux Containers_](https://www.youtube.com/watch?v=wW9CAH9nSLs). Let's revert his [git repository](https://github.com/moby/moby/tree/bba4e368077cbc73db2a12c259c5fc2330dffe75) to January of 2013, to a simpler time in Docker's development.
 
 <div class="padded-highlight">
-    <pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time</pre>
+    <pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time.</pre>
 </div>
 
 # How did Docker work in 2013?
@@ -20,7 +20,7 @@ TODO: FIX THIS IMAGE
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2013.png">
 
-Docker is composed of two main components, a command-line application for users and a daemon which tracks and manages containers. The daemon relies on two sub components to perform its job, storage on the host filesystem to store image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a Linux container.
+Docker is composed of two main components, a command-line application for users and a daemon which tracks and manages containers. The daemon relies on two sub components to perform its job, storage on the host file system to store image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a Linux container.
 
 ## Command-line Application
 
@@ -41,7 +41,7 @@ func main() {
 }
 {% endhighlight %}
 
-Immediately, a TCP connection is established to an address which is stored in the environment variable _DOCKER_, this is the address of the Docker daemon. The user supplied arguments are sent, and the app is now waiting to print out the results from a succesful reply.
+Immediately, a TCP connection is established to an address which is stored in the environment variable _DOCKER_, this is the address of the Docker daemon. The user supplied arguments are sent, and the app is now waiting to print out the results from a successful reply.
 
 ## dockerd
 
@@ -64,7 +64,7 @@ func main() {
 }
 {% endhighlight %}
 
-Once a command has been [recieved](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L36), _dockerd_ will lookup the [function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L59) to be run using [reflection](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/types.go#L41), and then call it to perform the user's actions.
+Once a command has been [received](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L36), _dockerd_ will lookup the [function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L59) to be run using [reflection](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/types.go#L41), and then call it to perform the user's actions.
 
 ### docker run
 
@@ -141,11 +141,11 @@ container := &Container{
 
     // "/var/lib/docker/containers/09906fa3/rootfs"
     // "/var/lib/docker/containers/09906fa3/rw"
-    // TODO: LAYERS
+    // TODO: WORK OUT WHETHER TO DO LAYERS OR NOT
     Filesystem: newFilesystem(path.Join(root, "rootfs"), path.Join(root, "rw"), layers),
     State:      newState(),
 
-    // "/var/lib/docker/containers/09906fa3/confix.lxc"
+    // "/var/lib/docker/containers/09906fa3/config.lxc"
     lxcConfigPath: path.Join(root, "config.lxc"),
     stdout:        newWriteBroadcaster(),
     stderr:        newWriteBroadcaster(),
@@ -154,7 +154,7 @@ container := &Container{
 }
 {% endhighlight %}
 
-When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code>. Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24), <code class="inline-highlight">/rootfs</code> which points to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a seperate read/write layer for the container to create temporary files.
+When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is created for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code>. Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24), <code class="inline-highlight">/rootfs</code> which points to the files from the image that are now inside the running container, and <code class="inline-highlight">/rw</code> to have a separate read/write layer for the container to create temporary files.
 
 Last, an [LXC config file](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L175) is generated by filling in a [template](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/lxc_template.go) with our newly created container data. More on LXC in the next section.
 
@@ -176,16 +176,33 @@ func (container *Container) Start() error {
     }
     params = append(params, container.Args...)
 
-    // TODO ANNOTATE
+    // /usr/bin/lxc-start -n 09906fa3 -f /var/lib/docker/containers/09906fa3/config.lxc -- "/bin/bash -i"
     container.cmd = exec.Command("/usr/bin/lxc-start", params...)
     ...
 }
 {% endhighlight %}
 
-TODO: TALK ABOUT MOUNTING THE DIRECTORIES
-https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L189
+The first step is to make sure the container's file system is [mounted](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L34). Using the AUFS union mount file system, the layers of an image are mounted read-only on top of each other to present one logical coherent view to the container. The read write path is mounted on the top layer to provide the container with temporary storage.
 
-To start a container, _dockerd_ runs another program _lxc-start_ with the LXC template we just generated.
+{% highlight go %}
+func (fs *Filesystem) Mount() error {
+    ...
+    rwBranch := fmt.Sprintf("%v=rw", fs.RWPath)
+    roBranches := ""
+    for _, layer := range fs.Layers {
+        roBranches += fmt.Sprintf("%v=ro:", layer)
+    }
+    branches := fmt.Sprintf("br:%v:%v", rwBranch, roBranches)
+
+    // Mount the branches onto "/var/lib/docker/containers/09906fa3/rootfs"
+    if err := syscall.Mount("none", fs.RootFS, "aufs", 0, branches); err != nil {
+        return err
+    }
+    ...
+}
+{% endhighlight %}
+
+Then, to start the container, _dockerd_ runs another program _lxc-start_ with the LXC template we just generated.
 
 #### LXC
 
