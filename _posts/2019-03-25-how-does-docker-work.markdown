@@ -250,27 +250,37 @@ SOMETHING ABOUT THE SIZE OF THE DOCKER PROJECT
 
 # How does Docker work in 2019?
 
-TODO
+6 years and 36,207 commits later, the moby/moby repo has evolved into a behemoth 
 
-THE CLI APP IS NOW OUT OF THE CODE BASE?
+36207 commits later
 
-The client to communcate with the daemon has grown considerably, here is the function which instructs the daemon to start a container:
+CLI
+---
+
+https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08
+
+CLI main is here: https://github.com/docker/cli/blob/cb6b33f0387d2426486e9bdf5211ddce5d403842/cmd/docker/docker.go#L234
+But the interface is influenced by the OS moby design: https://github.com/moby/moby/tree/55b5b8de793f65eea375b7f39877835f2302d26d/client
+
+CLI does only HTTP requests (JSON in the POST), same flow as in 2013, except mapping commands to functions client side is done through a new plugin system.
+
+Still follows the same RPC design....
+
+
+Container_start example
 https://github.com/moby/moby/blob/master/client/container_start.go
 
-This will send an HTTP post request to the docker daemon. https://github.com/moby/moby/blob/master/client/request.go
+Default daemon address: https://github.com/moby/moby/blob/master/client/client_unix.go
 
-By default, the docker daemon will have the address /var/run/docker.sock
-https://github.com/moby/moby/blob/master/client/client_unix.go
+DOCKERD
+-------
 
-We can command the docker daemon through:
-https://github.com/moby/moby/blob/master/cmd/dockerd/docker.go#L52
-
-and trigger it to start running: https://github.com/moby/moby/blob/472a52861c93539222015e614cc041ac4b79a483/cmd/dockerd/daemon.go#L74
+Start the daemon: https://github.com/moby/moby/blob/master/cmd/dockerd/docker.go#L52
 
 It will start an HTTP listener, waiting to process requests:
 https://github.com/moby/moby/blob/472a52861c93539222015e614cc041ac4b79a483/cmd/dockerd/daemon.go#L588
 
-The server begins its routing here:
+The server begins its routing here: (rather than reflection)
 https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/api/server/router/container/container.go#L30
 
 This function will receive the post request to start a container
@@ -278,4 +288,7 @@ https://github.com/moby/moby/blob/852542b3976754f62232f1fafca7fd35deeb1da3/api/s
 
 which then will pass over to the backend to start a container:
 https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/daemon/start.go#L18
+
+Containerd
+----------
 
