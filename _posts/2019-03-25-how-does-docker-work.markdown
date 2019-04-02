@@ -252,7 +252,7 @@ WINDOWS CONTAINERS
 
 # How does Docker work in 2019?
 
-After 6 years and 36,207 commits the moby repo has evolved into a large collaborative project, dependent on many components.
+After 6 years and 36,207 commits the moby repo has evolved into a large collaborative project, influencing and relying upon many components.
 
 TODO ARCHITECTURE:
 
@@ -260,19 +260,21 @@ To better understand these architectural changes, let's compare moby 2013 to [mo
 
 ## Command-line Application
 
-The control flow of the command-line application is largely unchanged. A request is made to the daemon, wait for a reply and print results. Today, HTTP(s) with JSON encoded bodies is the supported interface for communicating with _dockerd_.
+The control flow of the command-line application for the most part hasn't changed. A request is made to the daemon, it waits for a reply and then print the results. Today, HTTP(S) with JSON encoded bodies is the standard for communicating with _dockerd_.
 
 To allow for extensibility, the API and the docker binary were separated. The program code lives at [docker/cli](https://github.com/docker/cli), which relies upon the [moby/moby/client](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/client) package for the interface to talk to dockerd.
 
-TODO: could mention plugin system?
+## Dockerd
 
-Container_start example???
-https://github.com/moby/moby/blob/master/client/container_start.go
+WHAT DOES DOCKERD DO THAT IS NOT DONE BY CONTAINERD?
+- pushing and pulling images from registries (https://github.com/moby/moby/tree/master/distribution)
+- And dealing with the filesystem / volumes for containers
 
-Default daemon address: https://github.com/moby/moby/blob/master/client/client_unix.go???
+As the engine grew, the decision was made to break out the container supervision component of the engine into it's own project: containerd.
 
-DOCKERD
--------
+Containerd describes itself as a container runtime, which I find misleading. It's author, Michael Crosby, refers to it more aptly as a container supervisor, managing the lifecycle of containers on a system. Containerd supports all OCI compliant runtimes, by default runc.
+
+Then it just passes a config and file system path to containerd????
 
 Start the daemon: https://github.com/moby/moby/blob/master/cmd/dockerd/docker.go#L52
 
@@ -293,9 +295,7 @@ https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemo
 and start container
 https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L198
 
-
-Containerd
-----------
+# Containerd
 
 Client handle from here
 https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/libcontainerd/libcontainerd_linux.go
@@ -347,10 +347,11 @@ Extra
 -----
 https://www.youtube.com/watch?v=VWuHWfEB6ro
 https://containerd.io/img/architecture.png
+https://www.youtube.com/watch?v=sK5i-N34im8
 
 
 
-
+TODO: Ask Aleksa to review your post!
 
 
 
