@@ -248,29 +248,28 @@ OPEN CONTAINER INITIATIVE 2015 (because people wanted to create containers in ot
 
 SOMETHING ABOUT THE SIZE OF THE DOCKER PROJECT
 
+WINDOWS CONTAINERS
+
 # How does Docker work in 2019?
 
-6 years and 36,207 commits later, the moby/moby repo has evolved into a behemoth 
+After 6 years and 36,207 commits the moby repo has evolved into a large collaborative project, dependent on many components.
 
-36207 commits later
+TODO ARCHITECTURE:
 
-CLI
----
+To better understand these architectural changes, let's compare moby 2013 to [moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08).
 
-https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08
+## Command-line Application
 
-CLI main is here: https://github.com/docker/cli/blob/cb6b33f0387d2426486e9bdf5211ddce5d403842/cmd/docker/docker.go#L234
-But the interface is influenced by the OS moby design: https://github.com/moby/moby/tree/55b5b8de793f65eea375b7f39877835f2302d26d/client
+The control flow of the command-line application is largely unchanged. A request is made to the daemon, wait for a reply and print results. Today, HTTP(s) with JSON encoded bodies is the supported interface for communicating with _dockerd_.
 
-CLI does only HTTP requests (JSON in the POST), same flow as in 2013, except mapping commands to functions client side is done through a new plugin system.
+To allow for extensibility, the API and the docker binary were separated. The program code lives at [docker/cli](https://github.com/docker/cli), which relies upon the [moby/moby/client](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/client) package for the interface to talk to dockerd.
 
-Still follows the same RPC design....
+TODO: could mention plugin system?
 
-
-Container_start example
+Container_start example???
 https://github.com/moby/moby/blob/master/client/container_start.go
 
-Default daemon address: https://github.com/moby/moby/blob/master/client/client_unix.go
+Default daemon address: https://github.com/moby/moby/blob/master/client/client_unix.go???
 
 DOCKERD
 -------
@@ -286,9 +285,104 @@ https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/api/s
 This function will receive the post request to start a container
 https://github.com/moby/moby/blob/852542b3976754f62232f1fafca7fd35deeb1da3/api/server/router/container/container_routes.go#L170
 
-which then will pass over to the backend to start a container:
 https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/daemon/start.go#L18
+
+Pass to containerd to create
+https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L182
+
+and start container
+https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L198
+
 
 Containerd
 ----------
+
+Client handle from here
+https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/libcontainerd/libcontainerd_linux.go
+
+To create
+https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L210
+
+and start
+https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L240
+
+THEN:
+
+On the server side:
+Create
+https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/services/tasks/local.go#L112
+
+Create the task
+https://github.com/containerd/containerd/blob/35582cb7a33bd33b2693174acad5d303332671c0/runtime/v1/linux/runtime.go#L154
+
+
+and 
+
+Start task
+https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/services/tasks/local.go#L181
+
+which involves creating this process
+https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/runtime/task.go#L35
+
+On linux this is started here: https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/runtime/linux/process.go#L124
+
+Where it uses the "shim" of the task to start the process
+
+https://github.com/containerd/containerd/blob/9ed2c0aa021948d405b54e1d6ea7fde63bd8cd60/runtime/v1/linux/proc/init_state.go#L83
+
+https://github.com/containerd/containerd/blob/9ed2c0aa021948d405b54e1d6ea7fde63bd8cd60/runtime/v1/linux/proc/init.go#L258
+
+Then off to runc
+
+WHERE DOES THE CLEANUP MONITORING HAPPEN?
+
+RunC
+----
+(what is also refered to as a runtime in the code, but no)
+https://github.com/containerd/go-runc/blob/master/runc.go#L181
+
+https://github.com/opencontainers/runc
+
+Extra
+-----
+https://www.youtube.com/watch?v=VWuHWfEB6ro
+https://containerd.io/img/architecture.png
+
+
+
+
+
+
+
+
+https://github.com/containerd/containerd
+
+https://github.com/containerd/containerd/blob/8f63d2acdbca7082164d63222c1efe010e01c5e3/client.go#L222
+
+Create
+https://github.com/containerd/containerd/blob/c09932fcb01009cefc49f8731d863f58954e3c74/containerstore.go#L109
+
+
+
+
+
+Client then calls protobuf API to create
+https://github.com/containerd/containerd/blob/master/api/services/containers/v1/containers.pb.go#L421
+
+WHERE IS THE SERVICE RUNNING? WHATS THE ADDRESS??
+
+Implementation of the service:
+https://github.com/containerd/containerd/blob/155d7acb014671bc675367ec99cad8144548802c/services/containers/service.go
+
+https://github.com/containerd/containerd/blob/155d7acb014671bc675367ec99cad8144548802c/services/containers/local.go#L107
+
+https://github.com/containerd/containerd/blob/d5f00ed9138ca88bd4d693c89b9633b84e11efc9/metadata/containers.go#L106
+
+
+then talks to the shim???
+https://github.com/containerd/containerd/blob/06e04bc5a9e35dcd471cb5e20d0ca20b28fae730/runtime/v1/shim/service.go#L116
+
+https://github.com/containerd/containerd/blob/06e04bc5a9e35dcd471cb5e20d0ca20b28fae730/runtime/v1/shim/service.go#L635
+
+
 
