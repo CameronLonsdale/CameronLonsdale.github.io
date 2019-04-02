@@ -262,40 +262,92 @@ To better understand these architectural changes, let's compare moby 2013 to [mo
 
 The control flow of the command-line application for the most part hasn't changed. A request is made to the daemon, it waits for a reply and then print the results. Today, HTTP(S) with JSON encoded bodies is the standard for communicating with _dockerd_.
 
-To allow for extensibility, the API and the docker binary were separated. The program code lives at [docker/cli](https://github.com/docker/cli), which relies upon the [moby/moby/client](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/client) package for the interface to talk to dockerd.
+To allow for extensibility, the API and the docker binary were separated. The program code lives at [docker/cli](https://github.com/docker/cli), which relies upon the [moby/moby/client](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/client) package for the interface to talk to _dockerd_.
 
 ## Dockerd
 
-WHAT DOES DOCKERD DO THAT IS NOT DONE BY CONTAINERD?
-- pushing and pulling images from registries (https://github.com/moby/moby/tree/master/distribution)
-- And dealing with the filesystem / volumes for containers
+Dockerd will start [listening](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/cmd/dockerd/daemon.go#L584) for HTTP user requests, and process them according to [routes](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/api/server/router) predefined by the API. NOT SURE IF PREDEFINED IS THE BEST WORD
 
-As the engine grew, the decision was made to break out the container supervision component of the engine into it's own project: containerd.
+{% highlight go %}
+// Container Routes
+func (r *containerRouter) initRoutes() {
+    r.routes = []router.Route{
+        // HEAD
+        router.NewHeadRoute("/containers/{name:.*}/archive", r.headContainersArchive),
+        // GET
+        router.NewGetRoute("/containers/json", r.getContainersJSON),
+        router.NewGetRoute("/containers/{name:.*}/export", r.getContainersExport),
+        router.NewGetRoute("/containers/{name:.*}/changes", r.getContainersChanges),
+        ...
+    }
+} 
+{% endhighlight %}
 
-Containerd describes itself as a container runtime, which I find misleading. It's author, Michael Crosby, refers to it more aptly as a container supervisor, managing the lifecycle of containers on a system. Containerd supports all OCI compliant runtimes, by default runc.
+The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/master/distribution) and setting up directories on the file system for use by containers. TODO: FIND THIS!!!
 
-Then it just passes a config and file system path to containerd????
+An absent feature from the 2019 daemon is that it no longer manages the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project, _containerd_.
 
-Start the daemon: https://github.com/moby/moby/blob/master/cmd/dockerd/docker.go#L52
+Although [docker/engine](https://github.com/docker/engine) is forked from moby/moby allowing possible code divergence, they share the same commit tree to date.
 
-It will start an HTTP listener, waiting to process requests:
-https://github.com/moby/moby/blob/472a52861c93539222015e614cc041ac4b79a483/cmd/dockerd/daemon.go#L588
+### docker run
 
-The server begins its routing here: (rather than reflection)
-https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/api/server/router/container/container.go#L30
+{% highlight go %}
+func runContainer(dockerCli command.Cli, opts *runOptions, copts *containerOptions, containerConfig *containerConfig) error {
+    ...
+    // create the container
+    createResponse, err := createContainer(ctx, dockerCli, containerConfig, &opts.createOptions)
+    ...
+    // start the container
+    client.ContainerStart(ctx, createResponse.ID, types.ContainerStartOptions{});
+    ...
+}
+{% endhighlight %}
 
-This function will receive the post request to start a container
-https://github.com/moby/moby/blob/852542b3976754f62232f1fafca7fd35deeb1da3/api/server/router/container/container_routes.go#L170
+A [<code class="inline-highlight">docker run</code>](https://github.com/docker/cli/blob/afde31d710c2057960b35332f0be6c6c2aeaf3c9/cli/command/container/run.go#L95) command begins with a call to the daemon to create a container. This request is routed to [<code class="inline-highlight">postContainersCreate</code>](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container_routes.go#L443).
 
-https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/daemon/start.go#L18
+A [couple](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L39) [function](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L55) [calls](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L103) later and we're creating a container.
 
-Pass to containerd to create
-https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L182
+{% highlight go %}
+func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr error) {
+    var (
+        container *container.Container
+        img       *image.Image
+        imgID     image.ID
+        err       error
+    )
+    ...
+    container = daemon.newContainer(opts.params.Name, os, opts.params.Config, opts.params.HostConfig, imgID, opts.managed);
+    ...
+    // Set RWLayer for container after mount labels have been set
+    rwLayer = daemon.imageService.CreateLayer(container, setupInitLayer(daemon.idMapping))
+    container.RWLayer = rwLayer
+    ...
+    idtools.MkdirAndChown(container.Root, 0700, rootIDs);
+    idtools.MkdirAndChown(container.CheckpointDir(), 0700, rootIDs);
 
-and start container
-https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L198
+    // IS THIS IMPORTANT??
+    if err := daemon.createContainerOSSpecificSettings(container, opts.params.Config, opts.params.HostConfig); err != nil {
+        return nil, err
+    }
+    ...
+    daemon.Register(container);
+    ...
+}
+{% endhighlight %}
+
+TODO KEEP GOING
+
+Once the container has been created, we then make the call to start running it.
+
+TODO
 
 # Containerd
+
+Containerd self describes as a "container runtime", however I find this misleading. Borrowing the description given by its author Michael Crosby, I would say Containerd is better thought of as a container supervisor. TODO MORE.
+
+TODO something about runc?
+
+Then it just passes a config and file system path to containerd????
 
 Client handle from here
 https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/libcontainerd/libcontainerd_linux.go
@@ -348,7 +400,9 @@ Extra
 https://www.youtube.com/watch?v=VWuHWfEB6ro
 https://containerd.io/img/architecture.png
 https://www.youtube.com/watch?v=sK5i-N34im8
-
+https://blog.docker.com/2016/04/docker-containerd-integration/
+https://groups.google.com/forum/#!topic/docker-dev/zaZFlvIx1_k
+https://www.youtube.com/watch?v=ZAhzoz2zJj8
 
 
 TODO: Ask Aleksa to review your post!
