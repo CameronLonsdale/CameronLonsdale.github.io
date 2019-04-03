@@ -236,13 +236,11 @@ Finally, _dockerd_ will then [monitor](https://github.com/moby/moby/blob/bba4e36
 
 # What's changed?
 
-It's been 6 years since the introduction of Docker, and the containerisation paradigm has exploded in popularity.
+It's been 6 years since the introduction of Docker, and the containerisation paradigm has exploded in popularity. Small and large enterprises have adopted docker in production, especially after the popularisation of the orchestration system Kubernetes.
 
-OPEN CONTAINER INITIATIVE 2015 (because people wanted to create containers in other ways than just LXC??)
+3 contributors turned into 1808 through the power of Open Source, each person bringing with them new ideas for the project. Eager to promote extensibility the [Open Container Initiative](https://www.opencontainers.org/) (OCI) was formed in 2015 to define an open standard around container formats and runtimes. The [image spec](https://github.com/opencontainers/image-spec) outlines the structure of a container image, and the [runtime spec](https://github.com/opencontainers/runtime-spec) describes an interface and behaviour that systems should adhere to in order to run containers on their platform. As a result of this, the community has developed a wide range of tools for container management including native containers, and ones isolated by a virtual machine. With support from Microsoft, the industry now has OCI compliant native Windows containers as well.
 
-SOMETHING ABOUT THE SIZE OF THE DOCKER PROJECT
-
-WINDOWS CONTAINERS
+All of these changes have been reflected in the moby repo. With this new understanding of context, we can begin to deconstruct the many components of Docker 2019.
 
 # How does Docker work in 2019?
 
@@ -250,6 +248,7 @@ After 6 years and 36,207 commits the moby repo has evolved into a large collabor
 
 TODO ARCHITECTURE:
 
+DONT NEED TO SAY THIS
 To better understand these architectural changes, let's compare moby 2013 to [moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08).
 
 ## Command-line Application
