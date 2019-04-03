@@ -228,9 +228,7 @@ func (container *Container) monitor() {
     // Cleanup
     container.stdout.Close()
     container.stderr.Close()
-    if err := container.Filesystem.Umount(); err != nil {
-        log.Printf("%v: Failed to umount filesystem: %v", container.Id, err)
-    }
+    container.Filesystem.Umount();
 
     // Report status back
     container.State.setStopped(exitCode)
@@ -325,7 +323,7 @@ func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr
     // Windows or Linux specific setup
     daemon.createContainerOSSpecificSettings(container, opts.params.Config, opts.params.HostConfig);
     ...
-    // TODO
+    // Store in a map for future lookup
     daemon.Register(container);
     ...
 }
@@ -346,6 +344,7 @@ A request to [/container/&lt;ID&gt;/start](https://github.com/moby/moby/blob/468
 {% highlight go %}
 func (daemon *Daemon) containerStart(container *container.Container, checkpoint string, checkpointDir string, resetRestartManager bool) (err error) {
     ...
+    // Create OCI spec for container
     spec = daemon.createSpec(container);
     ...
     // DO WE NEED THIS??
@@ -357,8 +356,10 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
     // DO WE NEED THIS??
     ctx := context.TODO()
 
+    // Call containerd to create the container according to spec
     daemon.containerd.Create(ctx, container.ID, spec, createOptions)
     ...
+    // Call containerd to start running process inside of container
     pid = daemon.containerd.Start(context.Background(), container.ID, checkpointDir,
         container.StreamConfig.Stdin() != nil || container.Config.Tty,
         container.InitializeStdio);
@@ -387,6 +388,8 @@ Then it just passes a config and file system path to containerd????
 - Talk about create
 - Talk about run
 
+#### Create
+
 Client handle from here
 https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/libcontainerd/libcontainerd_linux.go
 
@@ -396,34 +399,65 @@ https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L210
 and start
 https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L240
 
-THEN:
+Then
 
-On the server side:
-Create
-https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/services/tasks/local.go#L112
+containerd client does this
+https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/client.go#L250
 
-Create the task
-https://github.com/containerd/containerd/blob/35582cb7a33bd33b2693174acad5d303332671c0/runtime/v1/linux/runtime.go#L154
+On the server:
+Create container service
+https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/containers/local.go#L107
 
-and 
+So Create pretty much just stores the data in containerd, nothing is created for the container pretty much.
 
-Start task
-https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/services/tasks/local.go#L181
+#### Start
+
+##### Task Create
+
+Container NewTask
+https://github.com/containerd/containerd/blob/04b2e5bbf7d73c51cfbeb6f92d9200f70516cf55/container.go#L191
+
+Task create
+https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128
+
+Then find the specified runtime, and create()
+Here is the V1 linux runc runtime: https://github.com/containerd/containerd/blob/master/runtime/v1/linux/runtime.go#L154
+
+- wtf is a bundle?
+- Then asks shim to create task? WHAT IS THE PURPOSE OF A SHIM!?
 
 which involves creating this process
 https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/runtime/task.go#L35
 
 On linux this is started here: https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/runtime/linux/process.go#L124
 
-Where it uses the "shim" of the task to start the process
+Create the init proc
+https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L109
 
-https://github.com/containerd/containerd/blob/9ed2c0aa021948d405b54e1d6ea7fde63bd8cd60/runtime/v1/linux/proc/init_state.go#L83
+Which asks runtime (runc) to create a process https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L141
 
-https://github.com/containerd/containerd/blob/9ed2c0aa021948d405b54e1d6ea7fde63bd8cd60/runtime/v1/linux/proc/init.go#L258
+TODO THERES SOMETHING ABOUT A MONITOR?
 
-Then off to runc
+##### Task Start
 
-WHERE DOES THE CLEANUP MONITORING HAPPEN?
+Start task
+https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/services/tasks/local.go#L181
+
+Ask the runtime to start the process associated with that task
+
+Ask the shim to start the process
+https://github.com/containerd/containerd/blob/master/runtime/v1/linux/process.go#L124
+
+Shim starts process
+https://github.com/containerd/containerd/blob/master/runtime/v1/shim/service.go#L190
+
+Start created container
+https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init_state.go#L83
+
+Then goes here.
+https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L258
+
+Asks runtime (runc) to start process
 
 RunC
 ----
@@ -431,6 +465,8 @@ RunC
 https://github.com/containerd/go-runc/blob/master/runc.go#L181
 
 https://github.com/opencontainers/runc
+
+
 
 Extra
 -----
@@ -443,6 +479,12 @@ https://www.youtube.com/watch?v=ZAhzoz2zJj8
 
 
 TODO: Ask Aleksa to review your post!
+
+
+https://blog.docker.com/2017/08/what-is-containerd-runtime/
+
+THIS IMAGE IS GOOD THANKS MICHAEL
+https://i2.wp.com/blog.docker.com/wp-content/uploads/974cd631-b57e-470e-a944-78530aaa1a23-1.jpg?w=906&ssl=1
 
 
 
