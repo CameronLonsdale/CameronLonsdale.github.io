@@ -260,13 +260,13 @@ To better understand these architectural changes, let's compare moby 2013 to [mo
 
 ## Command-line Application
 
-The control flow of the command-line application for the most part hasn't changed. A request is made to the daemon, it waits for a reply and then print the results. Today, HTTP(S) with JSON encoded bodies is the standard for communicating with _dockerd_.
+The control flow of the command-line application for the most part hasn't changed. Today, HTTP(S) with JSON encoded bodies is the standard for communicating with _dockerd_.
 
 To allow for extensibility, the API and the docker binary were separated. The program code lives at [docker/cli](https://github.com/docker/cli), which relies upon the [moby/moby/client](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/client) package for the interface to talk to _dockerd_.
 
 ## Dockerd
 
-Dockerd will start [listening](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/cmd/dockerd/daemon.go#L584) for HTTP user requests, and process them according to [routes](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/api/server/router) predefined by the API. NOT SURE IF PREDEFINED IS THE BEST WORD
+Dockerd will start [listening](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/cmd/dockerd/daemon.go#L584) for HTTP user requests, and process them according to predefined [routes](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/api/server/router).
 
 {% highlight go %}
 // Container Routes
@@ -285,9 +285,9 @@ func (r *containerRouter) initRoutes() {
 
 The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/master/distribution) and setting up directories on the file system for use by containers. TODO: FIND THIS!!!
 
-An absent feature from the 2019 daemon is that it no longer manages the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project, _containerd_.
+It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_.
 
-Although [docker/engine](https://github.com/docker/engine) is forked from moby/moby allowing possible code divergence, they share the same commit tree to date.
+Although [docker/engine](https://github.com/docker/engine) is forked from moby/moby, allowing possible code divergence, they share the same commit tree to date.
 
 ### docker run
 
@@ -305,37 +305,47 @@ func runContainer(dockerCli command.Cli, opts *runOptions, copts *containerOptio
 
 A [<code class="inline-highlight">docker run</code>](https://github.com/docker/cli/blob/afde31d710c2057960b35332f0be6c6c2aeaf3c9/cli/command/container/run.go#L95) command begins with a call to the daemon to create a container. This request is routed to [<code class="inline-highlight">postContainersCreate</code>](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container_routes.go#L443).
 
+#### Create
+
 A [couple](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L39) [function](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L55) [calls](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L103) later and we're creating a container.
 
 {% highlight go %}
 func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr error) {
-    var (
-        container *container.Container
-        img       *image.Image
-        imgID     image.ID
-        err       error
-    )
     ...
+    // Create container object
     container = daemon.newContainer(opts.params.Name, os, opts.params.Config, opts.params.HostConfig, imgID, opts.managed);
     ...
     // Set RWLayer for container after mount labels have been set
     rwLayer = daemon.imageService.CreateLayer(container, setupInitLayer(daemon.idMapping))
     container.RWLayer = rwLayer
     ...
+    // Create root directory 
     idtools.MkdirAndChown(container.Root, 0700, rootIDs);
-    idtools.MkdirAndChown(container.CheckpointDir(), 0700, rootIDs);
-
-    // IS THIS IMPORTANT??
-    if err := daemon.createContainerOSSpecificSettings(container, opts.params.Config, opts.params.HostConfig); err != nil {
-        return nil, err
-    }
     ...
+    // Windows or Linux specific setup
+    daemon.createContainerOSSpecificSettings(container, opts.params.Config, opts.params.HostConfig);
+    ...
+    // TODO
     daemon.Register(container);
     ...
 }
 {% endhighlight %}
 
-TODO KEEP GOING
+First we create an object to store container [metadata](https://github.com/moby/moby/blob/5801c0434500b8a90005f67eb55adb6ef5710aab/daemon/container.go#L130).
+
+Then like before, we create a root directory for the container, and setup the image data and read-write layer for use by the container. Today however, more file systems than AUFS are supported, including `btrfs` and `OverlayFS`. To support this, a driver system abstracts away implementation.
+
+Finally, the container object is added to the daemon's map of containers, for future use.
+
+#### Start
+
+https://github.com/moby/moby/blob/25661a3a0481af9b8002167ea9f474e9e1c25e32/api/server/router/container/container_routes.go#L170
+
+Start container
+https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L102
+
+Mount here: https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/layer/mounted_layer.go#L92
+
 
 Once the container has been created, we then make the call to start running it.
 
