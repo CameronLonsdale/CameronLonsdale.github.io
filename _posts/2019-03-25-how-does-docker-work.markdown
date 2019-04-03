@@ -283,11 +283,11 @@ func (r *containerRouter) initRoutes() {
 } 
 {% endhighlight %}
 
-The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/master/distribution) and setting up directories on the file system for use by containers. TODO: FIND THIS!!!
+The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/master/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers.
 
 It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_.
 
-Although [docker/engine](https://github.com/docker/engine) is forked from moby/moby, allowing possible code divergence, they share the same commit tree to date.
+Although [docker/engine](https://github.com/docker/engine) is forked from moby/moby, allowing for possible code divergence, they share the same commit tree to date.
 
 ### docker run
 
@@ -295,7 +295,7 @@ Although [docker/engine](https://github.com/docker/engine) is forked from moby/m
 func runContainer(dockerCli command.Cli, opts *runOptions, copts *containerOptions, containerConfig *containerConfig) error {
     ...
     // create the container
-    createResponse, err := createContainer(ctx, dockerCli, containerConfig, &opts.createOptions)
+    createResponse = createContainer(ctx, dockerCli, containerConfig, &opts.createOptions)
     ...
     // start the container
     client.ContainerStart(ctx, createResponse.ID, types.ContainerStartOptions{});
@@ -333,23 +333,48 @@ func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr
 
 First we create an object to store container [metadata](https://github.com/moby/moby/blob/5801c0434500b8a90005f67eb55adb6ef5710aab/daemon/container.go#L130).
 
-Then like before, we create a root directory for the container, and setup the image data and read-write layer for use by the container. Today however, more file systems than AUFS are supported, including `btrfs` and `OverlayFS`. To support this, a driver system abstracts away implementation.
+Then like before, we create a root directory for the container, and setup the image data and read-write layer for use by the container. Today however, more file systems than AUFS are supported, including `btrfs` and `OverlayFS`. To support this, a [driver system](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/graphdriver) abstracts away implementation.
 
 Finally, the container object is added to the daemon's map of containers, for future use.
 
 #### Start
 
-https://github.com/moby/moby/blob/25661a3a0481af9b8002167ea9f474e9e1c25e32/api/server/router/container/container_routes.go#L170
+The newly created container is left in the stopped state, now we have to start it.
 
-Start container
-https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L102
+A request to [/container/&lt;ID&gt;/start](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container.go#L52) leads us to [containerStart](https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L102).
 
-Mount here: https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/layer/mounted_layer.go#L92
+{% highlight go %}
+func (daemon *Daemon) containerStart(container *container.Container, checkpoint string, checkpointDir string, resetRestartManager bool) (err error) {
+    ...
+    spec = daemon.createSpec(container);
+    ...
+    // DO WE NEED THIS??
+    createOptions, err := daemon.getLibcontainerdCreateOptions(container)
+    if err != nil {
+        return err
+    }
 
+    // DO WE NEED THIS??
+    ctx := context.TODO()
 
-Once the container has been created, we then make the call to start running it.
+    daemon.containerd.Create(ctx, container.ID, spec, createOptions)
+    ...
+    pid = daemon.containerd.Start(context.Background(), container.ID, checkpointDir,
+        container.StreamConfig.Stdin() != nil || container.Config.Tty,
+        container.InitializeStdio);
+    ...
+}
+{% endhighlight %}
 
-TODO
+- Creates the spec
+- Creates the notion of a container inside containerd
+- Tells containerd to start running the container
+
+default spec https://github.com/moby/moby/blob/5801c0434500b8a90005f67eb55adb6ef5710aab/oci/defaults.go#L58 (IS THIS A DOCKER ONLY THING OR IS THIS OCI?)
+
+TODO WHERE DOES CONTAINER CLEANUP HAPPEN?
+
+Talk about libcontainerd and the GRPC calls to containerd
 
 # Containerd
 
@@ -358,6 +383,9 @@ Containerd self describes as a "container runtime", however I find this misleadi
 TODO something about runc?
 
 Then it just passes a config and file system path to containerd????
+
+- Talk about create
+- Talk about run
 
 Client handle from here
 https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/libcontainerd/libcontainerd_linux.go
@@ -376,7 +404,6 @@ https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888
 
 Create the task
 https://github.com/containerd/containerd/blob/35582cb7a33bd33b2693174acad5d303332671c0/runtime/v1/linux/runtime.go#L154
-
 
 and 
 
