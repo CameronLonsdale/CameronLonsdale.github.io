@@ -246,7 +246,6 @@ All of these changes have been reflected in the moby repo. With this new underst
 
 After 6 years and 36,207 commits the moby repo has evolved into a large collaborative project, influencing and relying upon many components.
 
-TODO ARCHITECTURE:
 
 DONT NEED TO SAY THIS
 To better understand these architectural changes, let's compare moby 2013 to [moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08).
@@ -514,4 +513,7 @@ https://github.com/containerd/containerd/blob/06e04bc5a9e35dcd471cb5e20d0ca20b28
 https://github.com/containerd/containerd/blob/06e04bc5a9e35dcd471cb5e20d0ca20b28fae730/runtime/v1/shim/service.go#L635
 
 
+Conclusion??
+
+On the surface Docker seems chaotic but underneath there is actually a lot of structure and modularisation. That said, finding out all this information was not an easy task. Having clear "self documenting" code is a great goal to strive for, but I don't think it's enough. When you have large systems with many components, sometimes you just need to write down in plain text what does this system look like, and what each component is responsible for. 
 
