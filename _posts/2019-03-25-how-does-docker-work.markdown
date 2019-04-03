@@ -4,7 +4,7 @@ title:  "How does Docker work?"
 date:   2019-03-25
 ---
 
-How does Docker _actually_ work? It's a simple question that has a surprisingly complex answer. You've probably heard the terms "daemon" and "runtime" thrown around in documentation and blog posts, but never really understood what they meant and how they fit together. If you're like me and went wading through the source to uncover the truth, you're not alone if you drowned in the sea of code. Let's face it, if Docker source code was a meal, you'd be chowing down on a big bowl of spaghetti.
+How does Docker _actually_ work? It's a simple question that has a surprisingly complex answer. You've probably heard the terms "daemon" and "runtime" thrown around, but never really understood what they meant and how they fit together. If you're like me and went wading through the source to uncover the truth, you're not alone if you drowned in the sea of code. Let's face it, if Docker source code was a meal, you'd be chowing down on a big bowl of spaghetti.
 
 Like a fork that guides pasta to your mouth, this post will group and guide the digital strands of Docker into your hungry mind.
 
@@ -20,7 +20,7 @@ TODO: FIX THIS IMAGE
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2013.png">
 
-Docker is composed of two main components, a command-line application for users and a daemon which tracks and manages containers. The daemon relies on two sub components to perform its job, storage on the host file system for image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a Linux container.
+Docker is composed of two main components, a command-line application for users and a daemon which manages containers. The daemon relies on two sub components to perform its job, storage on the host file system for image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a Linux container.
 
 ## Command-line Application
 
@@ -45,7 +45,7 @@ Immediately, a TCP connection is established to an address which is stored in th
 
 ## dockerd
 
-In the same repo lives the code for what's known as the docker daemon, or _dockerd_. Its job is to run in the background, cleaning up containers, and processing user requests. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
+In the same repo lives the code for the docker daemon, known as _dockerd_. Its job is to run in the background, processing user requests and cleaning up containers. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
 
 {% highlight go %}
 func main() {
@@ -141,7 +141,6 @@ container := &Container{    // Examples
 
     // "/var/lib/docker/containers/09906fa3/rootfs"
     // "/var/lib/docker/containers/09906fa3/rw"
-    // TODO: WORK OUT WHETHER TO DO LAYERS OR NOT
     Filesystem: newFilesystem(path.Join(root, "rootfs"), path.Join(root, "rw"), layers),
     State:      newState(),
 
@@ -164,9 +163,8 @@ Our container is finally created! But it's not yet running, for that we need to 
 
 {% highlight go %}
 func (container *Container) Start() error {
-    if err := container.Filesystem.EnsureMounted(); err != nil {
-        return err
-    }
+    // Mount file system if not mounted
+    container.Filesystem.EnsureMounted();
 
     params := []string{
         "-n", container.Id,
@@ -195,9 +193,7 @@ func (fs *Filesystem) Mount() error {
     branches := fmt.Sprintf("br:%v:%v", rwBranch, roBranches)
 
     // Mount the branches onto "/var/lib/docker/containers/09906fa3/rootfs"
-    if err := syscall.Mount("none", fs.RootFS, "aufs", 0, branches); err != nil {
-        return err
-    }
+    syscall.Mount("none", fs.RootFS, "aufs", 0, branches);
     ...
 }
 {% endhighlight %}
