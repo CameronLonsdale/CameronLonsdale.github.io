@@ -236,11 +236,11 @@ Finally, _dockerd_ will then [monitor](https://github.com/moby/moby/blob/bba4e36
 
 # What's changed?
 
-It's been 6 years since the introduction of Docker, and the containerisation paradigm has exploded in popularity. Small and large enterprises have adopted docker in production, especially after the popularisation of the orchestration system Kubernetes.
+It's been 6 years since the introduction of Docker, and the containerisation paradigm has exploded in popularity. Both small and large enterprises have adopted Docker, especially in tandem with the orchestration system Kubernetes.
 
-3 contributors turned into 1808 through the power of Open Source, each person bringing with them new ideas for the project. Eager to promote extensibility the [Open Container Initiative](https://www.opencontainers.org/) (OCI) was formed in 2015 to define an open standard around container formats and runtimes. The [image spec](https://github.com/opencontainers/image-spec) outlines the structure of a container image, and the [runtime spec](https://github.com/opencontainers/runtime-spec) describes an interface and behaviour that systems should adhere to in order to run containers on their platform. As a result of this, the community has developed a wide range of tools for container management including native containers, and ones isolated by a virtual machine. With support from Microsoft, the industry now has OCI compliant native Windows containers as well.
+3 contributors turned into 1808 through the power of Open Source, each person bringing with them new ideas for the project. Eager to promote extensibility, the [Open Container Initiative](https://www.opencontainers.org/) (OCI) was formed in 2015 to define an open standard around container formats and runtimes. The [image spec](https://github.com/opencontainers/image-spec) outlines the structure of a container image, and the [runtime spec](https://github.com/opencontainers/runtime-spec) describes an interface and behaviour that implementations should adhere to in order to run containers on their platform. As a result, the community developed a wide range of projects for container management, from native containers to ones isolated by a virtual machine. With support from Microsoft, the industry now has OCI compliant native Windows containers as well.
 
-All of these changes have been reflected in the moby repo. With this new understanding of context, we can begin to deconstruct the many components of Docker 2019.
+All of these changes have been reflected in the moby repo. With this historical context, we can begin deconstructing the components of Docker 2019.
 
 # How does Docker work in 2019?
 
@@ -248,7 +248,7 @@ After 6 years and 36,207 commits the moby repo has evolved into a large collabor
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2019.png">
 
-In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08) has two new main components, _containerd_ and _runtimes_ (in this example, _runc_). Container life cycle management has been taken out of the daemon and implemented in _containerd_. The actual construction of a container (the equivalent of LXC) is now done by an OCI compliant runtime.
+In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08) has two new main components, _containerd_ which supervises containers during their lifetime, and OCI compliant runtimes (for example, _runc_) that are the lowest user level abstraction to creating containers on a system (replacing LXC).
 
 ## Command-line Application
 
@@ -325,15 +325,13 @@ func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr
 
 First we create an object to store container [metadata](https://github.com/moby/moby/blob/5801c0434500b8a90005f67eb55adb6ef5710aab/daemon/container.go#L130).
 
-Then like before, we create a root directory for the container, and setup the image data and read-write layer for use by the container. Today however, more file systems than AUFS are supported, including `btrfs` and `OverlayFS`. To support this, a [driver system](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/graphdriver) abstracts away implementation.
+Then like before, we create a root directory with both the image data and read-write layer inside for use by the container. Today the difference is that union mount file system support has grown to include `btrfs`, `OverlayFS` and more. To facilitate this, a [driver system](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/graphdriver) abstracts away implementation.
 
 Finally, the container object is added to the daemon's map of containers, for future use.
 
 #### Start
 
-The newly created container is left in the stopped state, now we have to start it.
-
-A request to [/container/&lt;ID&gt;/start](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container.go#L52) leads us to [containerStart](https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L102).
+The container has been created, but is not yet running. Next we [request](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container.go#L52) to [start](https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L102) it.
 
 {% highlight go %}
 func (daemon *Daemon) containerStart(container *container.Container, checkpoint string, checkpointDir string, resetRestartManager bool) (err error) {
@@ -431,6 +429,7 @@ https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.
 Which asks runtime (runc) to create a process https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L141
 
 TODO THERES SOMETHING ABOUT A MONITOR?
+the publish model to let docker know about the containers status?
 
 ##### Task Start
 
