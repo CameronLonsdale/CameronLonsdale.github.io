@@ -16,9 +16,7 @@ In order to better understand the present, we first need to look at the past. In
 
 # How did Docker work in 2013?
 
-TODO: FIX THIS IMAGE
-
-<img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2013.png">
+<img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2013.svg" style="max-width: 500px;">
 
 Docker is composed of two main components, a command-line application for users and a daemon which manages containers. The daemon relies on two sub components to perform its job, storage on the host file system for image and container data; and the LXC interface to abstract away the raw kernel calls needed to construct a Linux container.
 
