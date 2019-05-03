@@ -43,7 +43,7 @@ Immediately, a TCP connection is established to an address which is stored in th
 
 ## dockerd
 
-In the same repo lives the code for the docker daemon, known as _dockerd_. Its job is to run in the background, processing user requests and cleaning up containers. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
+In the same repo lives the code for the docker daemon, known as _dockerd_. Its job is to run in the background processing user requests and cleaning up containers. Upon [start-up](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L680) _dockerd_ will listen for incoming HTTP connections on port 8080, and TCP connections on port 4242.
 
 {% highlight go %}
 func main() {
@@ -62,7 +62,7 @@ func main() {
 }
 {% endhighlight %}
 
-Once a command has been [received](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L36), _dockerd_ will lookup the [function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L59) to be run using [reflection](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/types.go#L41), and then call it to perform the user's actions.
+Once a command has been [received](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L36), _dockerd_ will lookup and call the [function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/tcp.go#L59) to be run using [reflection](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/rcli/types.go#L41).
 
 ### docker run
 
@@ -84,26 +84,27 @@ func (srv *Server) CmdRun(stdin io.ReadCloser, stdout io.Writer, args ...string)
         cmd = []string{"/bin/bash", "-i"}
     }
     ...
+    // Find the image
+    img := srv.images.Find(name)
+    ...
+    // Create Container
+    container := srv.CreateContainer(img, *fl_tty, *fl_stdin, *fl_comment, cmd[0], cmd[1:]...)
+    ...
+    // Start Container
+    container.Start()
+    ...
 }
 {% endhighlight %}
 
-The user will normally provide an image and command for _dockerd_ to run. When they are omitted, the image <code class="inline-highlight">base</code> and command <code class="inline-highlight">/bin/bash -i</code> are used.
+The user will normally provide an image and command for _dockerd_ to run. When they are omitted, the image <code class="inline-highlight">base</code> and command <code class="inline-highlight">/bin/bash</code> are used.
 
 #### Find the image
 
 Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system (assuming an image already exists due to a previous <code class="inline-highlight">docker pull</code>).
 
 {% highlight go %}
-// Find the image
-img := srv.images.Find(name)
-if img == nil {
-    return errors.New("No such image: " + name)
-}
-{% endhighlight %}
-
-{% highlight go %}
 type Index struct {
-    Path    string // "/var/lib/docker/images"
+    Path    string // "/var/lib/docker/images/index.json"
     ByName  map[string]*History
     ById    map[string]*Image
 }
@@ -131,10 +132,10 @@ Then we [create the container](https://github.com/moby/moby/blob/f8f9285ccaeb35a
 {% highlight go %}
 container := &Container{    // Examples
     Id:         id,         // "09906fa3"
-    Root:       root,       // "/var/lib/docker/containers/09906fa3/"
+    Root:       root,       // /var/lib/docker/containers/09906fa3/"
     Created:    time.Now(),
-    Path:       command,    // "/bin/bash -i"
-    Args:       args,
+    Path:       command,    // "/bin/bash"
+    Args:       args,       // ["-i"]
     Config:     config,
 
     // "/var/lib/docker/containers/09906fa3/rootfs"
@@ -149,6 +150,14 @@ container := &Container{    // Examples
     stdoutLog:     new(bytes.Buffer),
     stderrLog:     new(bytes.Buffer),
 }
+...
+// Create directories
+os.Mkdir(root, 0700);
+container.Filesystem.createMountPoints();
+...
+// Generate LXC Config file
+container.generateLXCConfig();
+
 {% endhighlight %}
 
 When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is made for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code>. Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24), <code class="inline-highlight">/rootfs</code> which is the read-only root file system (the layers from the image that have been union mounted), and <code class="inline-highlight">/rw</code> to have a separate read-write layer for the container to create temporary files.
@@ -172,7 +181,7 @@ func (container *Container) Start() error {
     }
     params = append(params, container.Args...)
 
-    // /usr/bin/lxc-start -n 09906fa3 -f /var/lib/docker/containers/09906fa3/config.lxc -- "/bin/bash -i"
+    // /usr/bin/lxc-start -n 09906fa3 -f /var/lib/docker/containers/09906fa3/config.lxc -- /bin/bash -i
     container.cmd = exec.Command("/usr/bin/lxc-start", params...)
     ...
 }
@@ -196,7 +205,7 @@ func (fs *Filesystem) Mount() error {
 }
 {% endhighlight %}
 
-Using the [AUFS](https://en.wikipedia.org/wiki/Aufs) union mount file system, the layers of an image are mounted read-only on top of each other to present one coherent view to the container. The read-write path is mounted on the top layer to provide the container with temporary storage.
+Using the [AUFS](https://en.wikipedia.org/wiki/Aufs) union mount file system, the layers of an image are mounted read-only on top of each other to present one coherent view to the container. The read-write path is mounted as the topmost layer to provide the container with temporary storage.
 
 Then, to start the container, _dockerd_ runs another program _lxc-start_ with the LXC template we just generated.
 
