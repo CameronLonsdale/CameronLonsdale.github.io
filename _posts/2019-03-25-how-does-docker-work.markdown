@@ -10,10 +10,6 @@ Like a fork that guides pasta to your mouth, this post will group and guide the 
 
 In order to better understand the present, we first need to look at the past. In 2013 Solomon Hykes of [dotCloud](https://www.crunchbase.com/organization/dotcloud#section-overview) revealed Docker to the public at the PyCon talk [_The future of Linux Containers_](https://www.youtube.com/watch?v=wW9CAH9nSLs). Let's revert his [git repository](https://github.com/moby/moby/tree/bba4e368077cbc73db2a12c259c5fc2330dffe75) to January of 2013, to a simpler time in Docker's development.
 
-<div class="padded-highlight">
-    <pre>Note: the moby/moby and docker/docker-ce repo's share the same tree of commits at this point in time.</pre>
-</div>
-
 # How did Docker work in 2013?
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2013.svg" style="max-width: 500px;">
@@ -255,7 +251,7 @@ After 6 years and 36,207 commits the moby repo has evolved into a large collabor
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2019.png">
 
-In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08) has two new main components, _containerd_ which supervises containers during their lifetime, and OCI compliant runtimes (for example, _runc_) that are the lowest user level abstraction to creating containers on a system (replacing LXC).
+In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08) has two new main components, _containerd_ which supervises containers during their lifetime, and OCI compliant runtimes (_runc_ for example) that are the lowest user level abstraction to creating containers on a system (replacing LXC).
 
 ## Command-line Application
 
@@ -282,7 +278,7 @@ func (r *containerRouter) initRoutes() {
 } 
 {% endhighlight %}
 
-The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/master/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers.
+The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers.
 
 It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_.
 
