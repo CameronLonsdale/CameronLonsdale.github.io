@@ -280,7 +280,7 @@ func (r *containerRouter) initRoutes() {
 
 The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers. The default driver will union mount an image to a directory inside of <code class="inline-highlight">/var/lib/docker/overlay2/</code>.
 
-It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_.
+It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_. This way, the docker daemon can continue to innovate without concern of breaking the runtime implementation.
 
 Although [docker/engine](https://github.com/docker/engine) is forked from moby/moby, allowing for possible code divergence, they share the same commit tree to date.
 
@@ -359,65 +359,83 @@ TODO WHERE DOES THE FOLDERS GET DELETED ON THE FILE SYSTEM???
 
 # Containerd
 
-Containerd self describes as a "container runtime", however I find this misleading. Borrowing the description given by its author Michael Crosby, I would say Containerd is better thought of as a container supervisor. TODO MORE.
+[Containerd](https://containerd.io/) has confusing terminology around it. It's described as a runtime, but doesn't implement the OCI runtime spec, therefore it's not a runtime in the same way that _runc_ is a runtime. Containerd is a daemon which oversees the life cycle of containers, using OCI compliant runtimes in order to manage them. I prefer the description given by [Michael Crosby](https://www.youtube.com/watch?v=VWuHWfEB6ro), think of Containerd as a container supervisor. 
 
-TODO something about runc?
+TODO:
 
-Then it just passes a config and file system path to containerd????
+- GRPC API
 
-- Talk about create
-- Talk about run
+- Takes OCI spec and file system location to create a container?
 
 #### Create
 
-Client handle from here
-https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/libcontainerd/libcontainerd_linux.go
+{% highlight go %}
+func (c *client) Create(ctx context.Context, id string, ociSpec *specs.Spec, runtimeOptions interface{}) error {
+    ...
+    c.client.NewContainer(ctx, id,
+        containerd.WithSpec(ociSpec),
+        containerd.WithRuntime(runtimeName, runtimeOptions),
+        WithBundle(bdir, ociSpec),
+    )
+    ...
+}
+{% endhighlight %}
 
-To create
-https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L210
+dockerd has a containerd client which it uses to request the [creation](https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L127) of a container. This client then uses GRPC to contact the containerd daemon. In order for Containerd to create a container it needs to know the OCI specification for that container, which OCI runtime to run the container with, and a the containers [bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md), which encodes where the root file system is.
 
-and start
-https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L240
+{% highlight go %}
+func (l *local) Create(ctx context.Context, req *api.CreateContainerRequest, _ ...grpc.CallOption) (*api.CreateContainerResponse, error) {
+   
+    l.withStoreUpdate(ctx, func(ctx context.Context, store containers.Store) error {
+        container := containerFromProto(&req.Container)
 
-Then
+        created := store.Create(ctx, container)
+        resp.Container = containerToProto(&created)
+        return nil
+    });
+    ...
+}
+{% endhighlight %}
 
-containerd client does this
-https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/client.go#L250
-
-On the server:
-Create container service
-https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/containers/local.go#L107
-
-So Create pretty much just stores the data in containerd, nothing is created for the container pretty much.
+[Server side](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/containers/local.go#L107), containerd simply takes all the data from the request and stores it in a file system backed [database](https://github.com/etcd-io/bbolt) in  <code class="inline-highlight">/var/lib/containerd</code>.
 
 #### Start
 
+{% highlight go %}
+// Start create and start a task for the specified containerd id
+func (c *client) Start(ctx context.Context, id, checkpointDir string, withStdin bool, attachStdio libcontainerdtypes.StdioCallback) (int, error) {
+    ctr, err := c.getContainer(ctx, id)
+    ...
+    t, err = ctr.NewTask(ctx, ...)
+    ...
+    t.Start(ctx);
+    ...
+    return int(t.Pid()), nil
+}
+{% endhighlight %}
+
+[Starting](https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L146) a container involves the creation and starting of a new object called a Task, which represents a process inside of a container. 
+
 ##### Task Create
 
-Container NewTask
-https://github.com/containerd/containerd/blob/04b2e5bbf7d73c51cfbeb6f92d9200f70516cf55/container.go#L191
+{% highlight go %}
+func (l *local) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.CallOption) (*api.CreateTaskResponse, error) {
+    container := l.getContainer(ctx, r.ContainerID)
+    ...
+    rtime l.getRuntime(container.Runtime.Name)
+    ...
+    c = rtime.Create(ctx, r.ContainerID, opts)
+    ...
+}
+{% endhighlight %}
 
-Task create
-https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128
+[Task creation](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128) is handled by the underlying container runtime. Containerd multiplexes OCI runtimes therefore we need to lookup the runtime to use and call it to create a task. The first and default runtime is _runc_, the [create](https://github.com/containerd/containerd/blob/4c16017e2f372598d5169965d1c8758cc1bfcce5/runtime/v1/linux/runtime.go#L154) calls its containerd marshalling code. This code doesn't just call runc directly however, it does so indirectly using a _shim_.
 
-Then find the specified runtime, and create()
-Here is the V1 linux runc runtime: https://github.com/containerd/containerd/blob/master/runtime/v1/linux/runtime.go#L154
+If Containerd were to crash, information on running containers would be lost. To mitigate this, containerd [creates a management process](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/shim/client/client.go#L55) for each container called a shim. The shim will call an OCI runtime to create and start a container, and then perform is duty of monitoring the container to capture the exit code and manage stdio. 
 
-- wtf is a bundle?
-- Then asks shim to create task? WHAT IS THE PURPOSE OF A SHIM!?
+Within [nested code](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L109), the shim will use [go-runc bindings](https://github.com/containerd/go-runc) to start the /run/containerd/runc with the [Create](https://github.com/containerd/go-runc/blob/master/runc.go#L140) command. More on RunC in the next section.
 
-which involves creating this process
-https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/runtime/task.go#L35
-
-On linux this is started here: https://github.com/containerd/containerd/blob/1ac546b3c4a3331a9997427052d1cb9888a2f3ef/runtime/linux/process.go#L124
-
-Create the init proc
-https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L109
-
-Which asks runtime (runc) to create a process https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L141
-
-TODO THERES SOMETHING ABOUT A MONITOR?
-the publish model to let docker know about the containers status?
+Containerd will store informatin about running containers in  <code class="inline-highlight">/var/run/containerd</code>.
 
 ##### Task Start
 
@@ -446,6 +464,11 @@ Asks runtime (runc) to start process
 https://github.com/containerd/go-runc/blob/master/runc.go#L181
 
 https://github.com/opencontainers/runc
+
+
+RUNC CREATE
+
+RUNC START
 
 
 # The visual summary
