@@ -255,13 +255,13 @@ In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93
 
 ## Command-line Application
 
-The control flow of the command-line application for the most part hasn't changed. Today, HTTP(S) with JSON encoded bodies is the standard for communicating with _dockerd_.
+The control flow of the command-line application for the most part hasn't changed. Today, HTTP(S) with a JSON body is the standard for communicating with _dockerd_.
 
 To allow for extensibility, the API and the docker binary were separated. The program code lives at [docker/cli](https://github.com/docker/cli), which relies upon the [moby/moby/client](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/client) package for the interface to talk to _dockerd_.
 
 ## Dockerd
 
-Dockerd will start [listening](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/cmd/dockerd/daemon.go#L584) for HTTP user requests, and process them according to predefined [routes](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/api/server/router).
+Dockerd will start [listening](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/cmd/dockerd/daemon.go#L584) for user requests, and process them according to predefined [routes](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/api/server/router).
 
 {% highlight go %}
 // Container Routes
@@ -278,7 +278,7 @@ func (r *containerRouter) initRoutes() {
 } 
 {% endhighlight %}
 
-The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers.
+The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers. The default driver will union mount an image to a directory inside of <code class="inline-highlight">/var/lib/docker/overlay2/</code>.
 
 It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_.
 
@@ -289,16 +289,16 @@ Although [docker/engine](https://github.com/docker/engine) is forked from moby/m
 {% highlight go %}
 func runContainer(dockerCli command.Cli, opts *runOptions, copts *containerOptions, containerConfig *containerConfig) error {
     ...
-    // create the container
+    // Create the container
     createResponse = createContainer(ctx, dockerCli, containerConfig, &opts.createOptions)
     ...
-    // start the container
+    // Start the container
     client.ContainerStart(ctx, createResponse.ID, types.ContainerStartOptions{});
     ...
 }
 {% endhighlight %}
 
-A [<code class="inline-highlight">docker run</code>](https://github.com/docker/cli/blob/afde31d710c2057960b35332f0be6c6c2aeaf3c9/cli/command/container/run.go#L95) command begins with a call to the daemon to create a container. This request is routed to [<code class="inline-highlight">postContainersCreate</code>](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container_routes.go#L443).
+A [<code class="inline-highlight">docker run</code>](https://github.com/docker/cli/blob/afde31d710c2057960b35332f0be6c6c2aeaf3c9/cli/command/container/run.go#L95) command begins by requesting the daemon to create a container. This request is routed to [<code class="inline-highlight">postContainersCreate</code>](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container_routes.go#L443).
 
 #### Create
 
@@ -342,15 +342,6 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
     // Create OCI spec for container
     spec = daemon.createSpec(container);
     ...
-    // DO WE NEED THIS??
-    createOptions, err := daemon.getLibcontainerdCreateOptions(container)
-    if err != nil {
-        return err
-    }
-
-    // DO WE NEED THIS??
-    ctx := context.TODO()
-
     // Call containerd to create the container according to spec
     daemon.containerd.Create(ctx, container.ID, spec, createOptions)
     ...
@@ -362,15 +353,9 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 }
 {% endhighlight %}
 
-- Creates the spec
-- Creates the notion of a container inside containerd
-- Tells containerd to start running the container
+Containerd manages containers, so we first need to call containerd to create the container according to the [OCI specification](https://github.com/moby/moby/blob/f7ec606fc1ce5d547662af485acd78eb732eedfe/daemon/oci_linux.go#L917). Lastly, we request containerd to start the container by launching a process inside.
 
-default spec https://github.com/moby/moby/blob/5801c0434500b8a90005f67eb55adb6ef5710aab/oci/defaults.go#L58 (IS THIS A DOCKER ONLY THING OR IS THIS OCI?)
-
-TODO WHERE DOES CONTAINER CLEANUP HAPPEN?
-
-Talk about libcontainerd and the GRPC calls to containerd
+TODO WHERE DOES THE FOLDERS GET DELETED ON THE FILE SYSTEM???
 
 # Containerd
 
