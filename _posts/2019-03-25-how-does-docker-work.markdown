@@ -353,9 +353,7 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 }
 {% endhighlight %}
 
-Containerd manages containers, so we first need to call containerd to create the container according to the [OCI specification](https://github.com/moby/moby/blob/f7ec606fc1ce5d547662af485acd78eb732eedfe/daemon/oci_linux.go#L917). Lastly, we request containerd to start the container by launching a process inside.
-
-TODO WHERE DOES THE FOLDERS GET DELETED ON THE FILE SYSTEM???
+This is where Containerd steps in, we first need to request a container be created according to the [OCI specification](https://github.com/moby/moby/blob/f7ec606fc1ce5d547662af485acd78eb732eedfe/daemon/oci_linux.go#L917). Then we request the Containerd to start running the process inside of the container. All other supervision of the container is handled by Containerd.
 
 # Containerd
 
@@ -441,11 +439,9 @@ Containerd will store information about running containers in <code class="inlin
 
 Now that the container has been created, starting the task simply [directs the shim](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/process.go#L124) to [start the process](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L258) by calling [runc start](https://github.com/containerd/go-runc/blob/master/runc.go#L181)
 
-# runc
+# Runc
 
-TODO
-
-https://github.com/opencontainers/runc
+[Runc](https://github.com/opencontainers/runc) is a command-line tool for spawning and running containers according to the OCI specification. Like LXC, it abstracts away the Linux kernel calls needed to create a container.
 
 ## Create
 
@@ -457,10 +453,7 @@ TODO How Create sets up all the shit and has basically a container ready to go w
 
 https://github.com/opencontainers/runc/blob/master/start.go
 
-TODO
-
-
-
+TODO: Runs the process
 
 # The visual summary
 
@@ -490,6 +483,3 @@ https://www.youtube.com/watch?v=ZAhzoz2zJj8
 TODO: Ask Aleksa to review your post!
 
 https://blog.docker.com/2017/08/what-is-containerd-runtime/
-
-THIS IMAGE IS GOOD THANKS MICHAEL
-https://i2.wp.com/blog.docker.com/wp-content/uploads/974cd631-b57e-470e-a944-78530aaa1a23-1.jpg?w=906&ssl=1
