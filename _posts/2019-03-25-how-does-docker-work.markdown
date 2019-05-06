@@ -353,40 +353,25 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 }
 {% endhighlight %}
 
-This is where Containerd steps in, we first need to request a container be created according to the [OCI specification](https://github.com/moby/moby/blob/f7ec606fc1ce5d547662af485acd78eb732eedfe/daemon/oci_linux.go#L917). Then we request the Containerd to start running the process inside of the container. All other supervision of the container is handled by Containerd.
+This is where Containerd steps in, first we request a container be created according to the [OCI specification](https://github.com/moby/moby/blob/f7ec606fc1ce5d547662af485acd78eb732eedfe/daemon/oci_linux.go#L917). Then, start running a process inside of the container. All subsequent supervision is handled by Containerd.
 
 # Containerd
 
-[Containerd](https://containerd.io/) has confusing terminology around it. It's described as a runtime, but doesn't implement the OCI runtime spec, therefore it's not a runtime in the same way that _runc_ is a runtime. Containerd is a daemon which oversees the life cycle of containers, using OCI compliant runtimes in order to manage them. I prefer the description given by [Michael Crosby](https://www.youtube.com/watch?v=VWuHWfEB6ro), think of Containerd as a container supervisor. 
+[Containerd](https://containerd.io/) has confusing terminology around it. It's described as a runtime, but doesn't implement the OCI runtime spec, therefore it's not a runtime in the same way that _runc_ is a runtime. Containerd is a daemon which oversees the life cycle of containers, using OCI compliant runtimes in order to manage them. I prefer the description given by [Michael Crosby](https://www.youtube.com/watch?v=VWuHWfEB6ro), think of Containerd as a container supervisor.
 
-TODO:
+TODO EDIT THIS:
 
-- GRPC API
+Effectively, all Containerd needs to create a container is a specification and the directory path to the container's root file system.
 
-- Takes OCI spec and file system location to create a container?
+Clients talk to Containerd using the GRPC protocol. Internally, Containerd is split into services which communicate to each other using GRPC aswell. 
 
 #### Create
 
 {% highlight go %}
-func (c *client) Create(ctx context.Context, id string, ociSpec *specs.Spec, runtimeOptions interface{}) error {
-    ...
-    c.client.NewContainer(ctx, id,
-        containerd.WithSpec(ociSpec),
-        containerd.WithRuntime(runtimeName, runtimeOptions),
-        WithBundle(bdir, ociSpec),
-    )
-    ...
-}
-{% endhighlight %}
-
-dockerd has a containerd client which it uses to request the [creation](https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L127) of a container. This client then uses GRPC to contact the containerd daemon. In order for Containerd to create a container it needs to know the OCI specification for that container, which OCI runtime to run the container with, and a the containers [bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md), which encodes where the root file system is.
-
-{% highlight go %}
 func (l *local) Create(ctx context.Context, req *api.CreateContainerRequest, _ ...grpc.CallOption) (*api.CreateContainerResponse, error) {
-   
     l.withStoreUpdate(ctx, func(ctx context.Context, store containers.Store) error {
+        // Update container data store with new container record
         container := containerFromProto(&req.Container)
-
         created := store.Create(ctx, container)
         resp.Container = containerToProto(&created)
         return nil
@@ -395,7 +380,7 @@ func (l *local) Create(ctx context.Context, req *api.CreateContainerRequest, _ .
 }
 {% endhighlight %}
 
-[Server side](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/containers/local.go#L107), containerd simply takes all the data from the request and stores it in a file system backed [database](https://github.com/etcd-io/bbolt) in  <code class="inline-highlight">/var/lib/containerd</code>.
+Dockerd (through a [client](https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L127)) requests Containerd to create a container. When received, Containerd takes the supplied spec, runtime and file system [bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md) and stores them in a file system backed [database](https://github.com/etcd-io/bbolt) in <code class="inline-highlight">/var/lib/containerd</code>.
 
 #### Start
 
@@ -427,9 +412,9 @@ func (l *local) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.
 }
 {% endhighlight %}
 
-[Task creation](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128) is handled by the underlying container runtime. Containerd multiplexes OCI runtimes therefore we need to lookup the runtime to use and call it to create a task. The first and default runtime is _runc_, the [create](https://github.com/containerd/containerd/blob/4c16017e2f372598d5169965d1c8758cc1bfcce5/runtime/v1/linux/runtime.go#L154) calls its containerd marshalling code. This code doesn't just call runc directly however, it does so indirectly using a _shim_.
+[Task creation](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128) is handled by the underlying container runtime. Containerd multiplexes OCI runtimes therefore we need to lookup which runtime to use and call it to create a task. The first and default runtime is _runc_. The [create](https://github.com/containerd/containerd/blob/4c16017e2f372598d5169965d1c8758cc1bfcce5/runtime/v1/linux/runtime.go#L154) for this runtime ends up running the external process _runc_, but it does so indrectly using a _shim_.
 
-If Containerd were to crash, information on running containers would be lost. To mitigate this, containerd [creates a management process](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/shim/client/client.go#L55) for each container called a shim. The shim will call an OCI runtime to create and start a container, and then perform is duty of monitoring the container to capture the exit code and manage stdio. 
+If Containerd were to crash, information on running containers would be lost. To mitigate this, Containerd [creates a management process](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/shim/client/client.go#L55) for each container called a shim. The shim will call an OCI runtime to create and start a container, and then perform its duty of monitoring the container to capture the exit code and manage standard IO. 
 
 Within [nested code](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L109), the shim will use [go-runc bindings](https://github.com/containerd/go-runc) to start <code class="inline-highlight">/run/containerd/runc</code> with the [Create](https://github.com/containerd/go-runc/blob/master/runc.go#L140) command. More on runc in the next section.
 
@@ -441,31 +426,67 @@ Now that the container has been created, starting the task simply [directs the s
 
 # Runc
 
-[Runc](https://github.com/opencontainers/runc) is a command-line tool for spawning and running containers according to the OCI specification. Like LXC, it abstracts away the Linux kernel calls needed to create a container.
+[Runc](https://github.com/opencontainers/runc) is a command-line tool for spawning and running containers according to the OCI specification. Perfoming a similar job to LXC, it abstracts away the Linux kernel calls needed to create a container.
 
 ## Create
 
-https://github.com/opencontainers/runc/blob/master/create.go
+{% highlight go %}
+var createCommand = cli.Command{
+    Name:  "create",
+    Description: `The create command creates an instance of a container for a bundle. The bundle
+is a directory with a specification file named "` + specConfig + `" and a root
+filesystem.`,
+    ...
+    Action: func(context *cli.Context) error {
+        spec := setupSpec(context)
+        ...
+        status := startContainer(context, spec, CT_ACT_CREATE, nil)
+        // exit with the container's exit status so any external supervisor is
+        // notified of the exit with the correct exit status.
+        os.Exit(status)
+        return nil
+    },
+{% endhighlight %}
 
-TODO How Create sets up all the shit and has basically a container ready to go with a process that's paused
+When runc [creates](https://github.com/opencontainers/runc/blob/master/create.go) a container it sets up the namespace, cgroup and even the init process inside the container. The process is paused, [waiting](http://man7.org/linux/man-pages/man2/waitpid.2.html) for a signal to start it running.
 
 ## Start
 
-https://github.com/opencontainers/runc/blob/master/start.go
+{% highlight go %}
+var startCommand = cli.Command{
+    Name:  "start",
+    Usage: "executes the user defined process in a created container",
+    ...
+    Action: func(context *cli.Context) error {
+        container := getContainer(context)
+        status := container.Status()
+        ...
+        switch status {
+        case libcontainer.Created:
+            return container.Exec()
+        case libcontainer.Stopped:
+            return errors.New("cannot start a container that has stopped")
+        case libcontainer.Running:
+            return errors.New("cannot start an already running container")
+        }
+    },
+}
+{% endhighlight %}
 
-TODO: Runs the process
+Finally, to [start](https://github.com/opencontainers/runc/blob/master/start.go) the container, runc sends a signal to the paused process to begin executing.
 
-# The visual summary
+# The Visual Summary
 
-TODO
+Using Containerd's architecture [diagram](https://containerd.io/img/architecture.png) as a reference, we can try to visually sumarise the entire process of running a container.
 
-- Use this as a reference https://containerd.io/img/architecture.png, and modify to show the control flow we go through to create and start a container.
+<img src="{{ site.baseurl }}/assets/img/docker-work/visualsummary.png">
 
 # Conclusion
 
-TODO
+On the surface Docker and its companion projects appear chaotic but underneath there is rigid structure and modularisation. That said, uncovering all this information was not easy, it was spread across code, blog posts, conference talks, documentation and meeting notes. Having clear "self documenting" code is a great goal to aim for, but when it comes to large systems, I don't think it's enough. Sometimes you just need to write down in plain language what a system looks like, and what each component is reponsible for. 
 
-On the surface Docker seems chaotic but underneath there is actually a lot of structure and modularisation. That said, finding out all this information was not an easy task. Having clear "self documenting" code is a great goal to strive for, but I don't think it's enough. When you have large systems with many components, sometimes you just need to write down in plain text what does this system look like, and what each component is responsible for. 
+TODO FINAL LINE
+
 
 # Additional Sources
 
