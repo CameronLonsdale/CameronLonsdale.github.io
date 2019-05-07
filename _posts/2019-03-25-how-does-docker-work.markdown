@@ -517,9 +517,9 @@ Using _containerd's_ architecture [diagram](https://containerd.io/img/architectu
 
 On the surface Docker and its companion projects appear chaotic but underneath there is rigid structure and modularisation. That said, uncovering all this information was not easy, it was spread across code, blog posts, conference talks, documentation and meeting notes. Having clear "self documenting" code is a great goal to aim for, but when it comes to large systems, I don't think it's enough. Sometimes you just need to write down in plain language what a system looks like, and what each component is responsible for. 
 
-I hope this has been helpful in explaining exactly how Docker runs containers. I know that I'll be coming back to read this post many more times in the future.
+A big thank you to all the contributors of these projects, especially those who wrote documentation which explained these systems.
 
-A big thank you to all the contributors of these projects, and to those who took time to explain and document parts of the system.
+I hope this has been helpful in explaining exactly how Docker runs containers. I know that I'll be coming back to read this post many more times in the future.
 
 ## Additional Sources
 
