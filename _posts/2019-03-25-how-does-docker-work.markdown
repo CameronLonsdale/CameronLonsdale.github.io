@@ -18,7 +18,7 @@ Docker is composed of two main components, a command-line application for users 
 
 ## Command-line Application
 
-The Docker command-line application is the human interface to managing all images and containers known to your running copy of Docker. It's relatively simple since all of the management is done by the _dockerd_ component. The app starts at the [main function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker/docker.go#L161):
+The Docker command-line application is the human interface to managing all images and containers known to your running copy of Docker. It's relatively simple since all of the management is done by the daemon. The app starts at the [main function](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker/docker.go#L161):
 
 {% highlight go %}
 func main() {
@@ -35,7 +35,7 @@ func main() {
 }
 {% endhighlight %}
 
-Immediately, a TCP connection is established to an address which is stored in the environment variable _DOCKER_, this is the address of the Docker daemon. The user supplied arguments are sent, and the app is now waiting to print out the results from a successful reply.
+Immediately, a TCP connection is established to an address which is stored in the environment variable _DOCKER_, this is the address of the Docker daemon. The user supplied arguments are sent, and the app is now waiting to print the results from a successful reply.
 
 ## dockerd
 
@@ -96,7 +96,7 @@ The user will normally provide an image and command for _dockerd_ to run. When t
 
 #### Find the image
 
-Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/image/image.go#L94) (or id) to a location on the file system (assuming an image already exists due to a previous <code class="inline-highlight">docker pull</code>).
+Then we find the specified image by [mapping the name](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/image/image.go#L94) (or id) to a location on the file system (assuming an image already exists due to a previous <code class="inline-highlight">docker pull</code>).
 
 {% highlight go %}
 type Index struct {
@@ -119,11 +119,11 @@ func (index *Index) Find(idOrName string) *Image {
 }
 {% endhighlight %}
 
-In this version of Docker all images are stored in the folder [<code class="inline-highlight">/var/lib/docker/images</code>](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/dockerd/dockerd.go#L687). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
+In this version of Docker all images are stored in the folder [<code class="inline-highlight">/var/lib/docker/images</code>](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/dockerd/dockerd.go#L698). To learn more about what's in a docker image, see my [previous blog post](https://cameronlonsdale.com/2018/11/26/whats-in-a-docker-image/).
 
 #### Create the container
 
-Then we [create the container](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/docker.go#L49). _dockerd_ creates a structure to hold all the metadata related to this container, and stores it in a list for easy access.
+Then we [create the container](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/docker.go#L49). _dockerd_ creates a structure to hold all the metadata related to this container, and stores it in a list for easy access.
 
 {% highlight go %}
 container := &Container{    // Examples
@@ -156,13 +156,13 @@ container.generateLXCConfig();
 
 {% endhighlight %}
 
-When [creating the struct](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L75) is made for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code>. Inside this path are [two directories](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L24), <code class="inline-highlight">/rootfs</code> which is the read-only root file system (the layers from the image that have been union mounted), and <code class="inline-highlight">/rw</code> to have a separate read-write layer for the container to create temporary files.
+When [creating the struct](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L50) a [unique directory](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L75) is made for the container at the path <code class="inline-highlight">/var/lib/docker/containers/&lt;ID&gt;</code>. Inside this path are [two directories](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/filesystem.go#L24), <code class="inline-highlight">/rootfs</code> which is the read-only root file system (the layers from the image that have been union mounted), and <code class="inline-highlight">/rw</code> to have a separate read-write layer for the container to create temporary files.
 
-Last, an [LXC config file](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L175) is generated by filling in a [template](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/lxc_template.go) with our newly created container data. More on LXC in the next section.
+Last, an [LXC config file](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L175) is generated by filling in a [template](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/lxc_template.go) with our newly created container data. More on LXC in the next section.
 
 #### Run the container
 
-Our container is finally created! But it's not yet running, for that we need to [start](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/container.go#L188) it.
+Our container is finally created! But it's not yet running, for that we need to [start](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L255) it.
 
 {% highlight go %}
 func (container *Container) Start() error {
@@ -183,7 +183,7 @@ func (container *Container) Start() error {
 }
 {% endhighlight %}
 
-The first step is to make sure the container's file system is [mounted](https://github.com/moby/moby/blob/f8f9285ccaeb35a2d5909a03f48f9d3b9d34aca2/filesystem.go#L34).
+The first step is to make sure the container's file system is [mounted](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/filesystem.go#L34).
 
 {% highlight go %}
 func (fs *Filesystem) Mount() error {
@@ -207,7 +207,7 @@ Then, to start the container, _dockerd_ runs another program _lxc-start_ with th
 
 #### LXC
 
-[LXC](https://linuxcontainers.org/lxc/introduction/) (Linux Containers) is an abstraction layer which provides userspace applications with a simple API to create and manage containers. The truth is, containers are [not a real thing](https://blog.jessfraz.com/post/containers-zones-jails-vms/), there is no such object called a container inside the Linux Kernel. Containers are a collection of kernel objects that work together to provide process isolation. Therefore, the simple [<code class="inline-highlight">lxc-start</code>](https://linuxcontainers.org/lxc/manpages//man1/lxc-start.1.html#LXC) command actually translates into the setup and application of:
+[LXC](https://linuxcontainers.org/lxc/introduction/) (Linux Containers) is an abstraction layer which provides userspace applications with a simple API to create and manage containers. The truth is, containers are [not a real thing](https://blog.jessfraz.com/post/containers-zones-jails-vms/), there is no such object called a container inside the Linux kernel. Containers are a collection of kernel objects that work together to provide process isolation. Therefore, the simple [<code class="inline-highlight">lxc-start</code>](https://linuxcontainers.org/lxc/manpages//man1/lxc-start.1.html#LXC) command actually translates into the setup and application of:
 
 * Kernel namespaces (ipc, uts, mount, pid, network and user)
 * Apparmor and SELinux profiles
@@ -237,11 +237,25 @@ func (container *Container) monitor() {
 
 Finally, _dockerd_ will then [monitor](https://github.com/moby/moby/blob/bba4e368077cbc73db2a12c259c5fc2330dffe75/container.go#L334) the container til completion, cleaning up unnecessary data now that the container has finished.
 
+
+## Summary
+
+In summary, launching a container using Docker 2013 involves the following steps:
+
+{% highlight text %}
+dockerd is sent the run command (using the command-line application or otherwise)
+    ↳ dockerd finds the specified image on the file system
+    ↳ A container struct is created and stored for future use
+    ↳ Directories on the file system are setup for use by the container
+    ↳ LXC is instructed to start the container
+    ↳ dockerd monitors the container until completion
+{% endhighlight %}
+
 # What's changed?
 
 It's been 6 years since the introduction of Docker, and the containerisation paradigm has exploded in popularity. Both small and large enterprises have adopted Docker, especially in tandem with the orchestration system Kubernetes.
 
-3 contributors turned into 1808 through the power of Open Source, each person bringing with them new ideas for the project. Eager to promote extensibility, the [Open Container Initiative](https://www.opencontainers.org/) (OCI) was formed in 2015 to define an open standard around container formats and runtimes. The [image spec](https://github.com/opencontainers/image-spec) outlines the structure of a container image, and the [runtime spec](https://github.com/opencontainers/runtime-spec) describes an interface and behaviour that implementations should adhere to in order to run containers on their platform. As a result, the community developed a wide range of projects for container management, from native containers to ones isolated by a virtual machine. With support from Microsoft, the industry now has OCI compliant native Windows containers as well.
+3 contributors turned into over 1800 through the power of Open Source, each person bringing with them new ideas for the project. Eager to promote extensibility, the [Open Container Initiative](https://www.opencontainers.org/) (OCI) was formed in 2015 to define an open standard around container formats and runtimes. The [image spec](https://github.com/opencontainers/image-spec) outlines the structure of a container image, and the [runtime spec](https://github.com/opencontainers/runtime-spec) describes the interface and behaviour that implementations should adhere to in order to run containers on their platform. As a result, the community developed a wide range of projects for container management, from native containers to ones isolated by a virtual machine. With support from Microsoft, the industry now has OCI compliant native Windows containers as well.
 
 All of these changes have been reflected in the moby repo. With this historical context, we can begin deconstructing the components of Docker 2019.
 
@@ -251,7 +265,7 @@ After 6 years and 36,207 commits the moby repo has evolved into a large collabor
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/architecture_2019.svg" style="max-width: 500px; display: block; margin-left: auto; margin-right: auto;">
 
-In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08) has two new main components, _containerd_ which supervises containers during their lifetime, and OCI compliant runtimes (_runc_ for example) that are the lowest user level abstraction to creating containers on a system (replacing LXC).
+In a very simplistic view, [Moby 2019](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08) has two new main components, _containerd_ which supervises containers during their lifetime, and OCI compliant runtimes (e.g _runc_) that are the lowest user level abstraction for creating containers (replacing LXC).
 
 ## Command-line Application
 
@@ -278,7 +292,7 @@ func (r *containerRouter) initRoutes() {
 } 
 {% endhighlight %}
 
-The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/daemon.go#L1204) for use by containers. The default driver will union mount an image to a directory inside of <code class="inline-highlight">/var/lib/docker/overlay2/</code>.
+The engine is still responsible for a variety of tasks, like interacting with [image registries](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/distribution) and setting up directories on the [file system](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/daemon.go#L1204) for use by containers. The default driver will union mount an image to a directory inside of <code class="inline-highlight">/var/lib/docker/overlay2/</code>.
 
 It is no longer responsible for managing the life cycle of running containers. As the project grew, the decision was made to split off container supervision into a separate project called _containerd_. This way, the docker daemon can continue to innovate without concern of breaking the runtime implementation.
 
@@ -302,10 +316,13 @@ A [<code class="inline-highlight">docker run</code>](https://github.com/docker/c
 
 #### Create
 
-A [couple](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L39) [function](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L55) [calls](https://github.com/moby/moby/blob/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/create.go#L103) later and we're creating a container.
+A [couple](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/create.go#L30) [function](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/create.go#L34) [calls](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/create.go#L82) later and we're creating a container.
 
 {% highlight go %}
 func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr error) {
+    ...
+    // Find the Image
+    img = daemon.imageService.GetImage(params.Config.Image)
     ...
     // Create container object
     container = daemon.newContainer(opts.params.Name, os, opts.params.Config, opts.params.HostConfig, imgID, opts.managed);
@@ -326,15 +343,15 @@ func (daemon *Daemon) create(opts createOpts) (retC *container.Container, retErr
 }
 {% endhighlight %}
 
-First we create an object to store container [metadata](https://github.com/moby/moby/blob/5801c0434500b8a90005f67eb55adb6ef5710aab/daemon/container.go#L130).
+First we create an object to store container [metadata](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/container.go#L130).
 
-Then like before, we create a root directory with both the image data and read-write layer inside for use by the container. Today the difference is that union mount file system support has grown to include `btrfs`, `OverlayFS` and more. To facilitate this, a [driver system](https://github.com/moby/moby/tree/a3eda72f71962cbe413795fcf496d63aa8f15a7a/daemon/graphdriver) abstracts away implementation.
+Then like before, we create a root directory with both the image data and read-write layer inside for use by the container. Today the difference is that union mount file system support has grown to include `btrfs`, `OverlayFS` and more. To facilitate this, a [driver system](https://github.com/moby/moby/tree/468eb93e5acc809248405102db32460fe7efed08/daemon/graphdriver) abstracts away implementation.
 
 Finally, the container object is added to the daemon's map of containers, for future use.
 
 #### Start
 
-The container has been created, but is not yet running. Next we [request](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container.go#L52) to [start](https://github.com/moby/moby/blob/fcb286895b7043d8c8a6357b9d001e515d560e9f/daemon/start.go#L102) it.
+The container has been created, but is not yet running. Next we [request](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/api/server/router/container/container.go#L52) to [start](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/start.go#L102) it.
 
 {% highlight go %}
 func (daemon *Daemon) containerStart(container *container.Container, checkpoint string, checkpointDir string, resetRestartManager bool) (err error) {
@@ -353,11 +370,11 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 }
 {% endhighlight %}
 
-This is where _containerd_ steps in, first we request a container be created according to the [OCI specification](https://github.com/moby/moby/blob/f7ec606fc1ce5d547662af485acd78eb732eedfe/daemon/oci_linux.go#L917). Then, start running a process inside of the container. All subsequent supervision is handled by _containerd_.
+This is where _containerd_ steps in, first we request a container be created according to the [OCI specification](https://github.com/moby/moby/blob/468eb93e5acc809248405102db32460fe7efed08/daemon/oci_linux.go#L695). Then, start running a process inside of the container. All subsequent supervision is handled by _containerd_.
 
 ## containerd
 
-[_containerd_](https://containerd.io/) has confusing terminology around it. It's described as a runtime, but doesn't implement the OCI runtime spec, therefore it's not a runtime in the same way that _runc_ is a runtime. _containerd_ is a daemon which oversees the life cycle of containers, using OCI compliant runtimes in order to manage them. As [Michael Crosby](https://www.youtube.com/watch?v=VWuHWfEB6ro) describes it, _containerd_ is a container supervisor.
+[_containerd_](https://containerd.io/) has confusing terminology around it. It's described as a runtime, but doesn't implement the OCI runtime spec, therefore it's not a runtime in the same way that _runc_ is. _containerd_ is a daemon which oversees the life cycle of containers, using OCI compliant runtimes in order to manage them. As [Michael Crosby](https://www.youtube.com/watch?v=VWuHWfEB6ro) describes it, _containerd_ is a container supervisor.
 
 The interface is simple, all that's required to create a container is its specification and a [bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md) which encodes where the root file system is.
 
@@ -376,7 +393,7 @@ func (l *local) Create(ctx context.Context, req *api.CreateContainerRequest, _ .
 }
 {% endhighlight %}
 
-_dockerd_ (through a GRPC [client](https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L127)) requests _containerd_ to create a container. Upon receival, _containerd_ stores the specification in a file system backed [database](https://github.com/etcd-io/bbolt) located within <code class="inline-highlight">/var/lib/containerd</code>.
+_dockerd_ (through a GRPC [client](https://github.com/moby/moby/blob/b9b5dc37e37e67d1cd46d9a3448c96e3f57ef4bc/libcontainerd/remote/client.go#L127)) requests _containerd_ to create a container. Upon receival, _containerd_ stores the specification in a file system backed [database](https://github.com/etcd-io/bbolt) located within <code class="inline-highlight">/var/lib/containerd/</code>.
 
 ### Start
 
@@ -393,7 +410,7 @@ func (c *client) Start(ctx context.Context, id, checkpointDir string, withStdin 
 }
 {% endhighlight %}
 
-[Starting](https://github.com/moby/moby/blob/master/libcontainerd/remote/client.go#L146) a container involves the creation and starting of a new object called a Task, which represents a process inside of a container. 
+[Starting](https://github.com/moby/moby/blob/b9b5dc37e37e67d1cd46d9a3448c96e3f57ef4bc/libcontainerd/remote/client.go#L146) a container involves the creation and starting of a new object called a Task, which represents a process inside of a container. 
 
 #### Task Create
 
@@ -408,17 +425,17 @@ func (l *local) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.
 }
 {% endhighlight %}
 
-[Task creation](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128) is handled by the underlying container runtime. _containerd_ multiplexes OCI runtimes, therefore we need to lookup which runtime to use to create the task. The first and default runtime is _runc_. The [create](https://github.com/containerd/containerd/blob/4c16017e2f372598d5169965d1c8758cc1bfcce5/runtime/v1/linux/runtime.go#L154) for this runtime ends up running the external process _runc_, but it does so indirectly using a _shim_.
+[Task creation](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/services/tasks/local.go#L128) is handled by the underlying container runtime. _containerd_ multiplexes OCI runtimes, therefore we need to lookup which runtime to use to create the task. The first and default runtime is _runc_. The [<code class="inline-highlight">Create</code>](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/runtime/v1/linux/runtime.go#L154) for this runtime ends up running the external process _runc_, but it does so indirectly using a _shim_.
 
-If _containerd_ were to crash, information about running containers would be lost. To protect against this, _containerd_ [creates a management process](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/shim/client/client.go#L55) for each container called a shim. The shim will call an OCI runtime to create and start a container, and then perform its duty of monitoring the container to capture the exit code and manage standard IO. 
+If _containerd_ were to crash, information about running containers would be lost. To protect against this, _containerd_ [creates a management process](https://github.com/containerd/containerd/blob/2f60e389a03740339c9c2762004fdcb5de489b09/runtime/v1/shim/client/client.go#L55) for each container called a shim. The shim will call an OCI runtime to create and start a container, and then perform its duty of monitoring the container to capture the exit code and manage standard IO. 
 
-Within [nested code](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L109), the shim will use [go-runc bindings](https://github.com/containerd/go-runc) to start <code class="inline-highlight">/run/containerd/runc</code> with the [Create](https://github.com/containerd/go-runc/blob/master/runc.go#L140) command. More on _runc_ in the next section.
+Within [nested code](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/linux/proc/init.go#L109), the shim will use [go-runc bindings](https://github.com/containerd/go-runc) to start <code class="inline-highlight">/run/containerd/runc</code> with the [create](https://github.com/containerd/go-runc/blob/e32098aae3bc878417256292705aedbde3aa3dd8/runc.go#L140) command. More on _runc_ in the next section.
 
-In the event where _containerd_ does crash, it can recover by communicating with the shims, and reading state from <code class="inline-highlight">/var/run/containerd</code>.
+In the event where _containerd_ does crash, it can recover by communicating with the shims, and reading state from <code class="inline-highlight">/var/run/containerd/</code>.
 
 #### Task Start
 
-Now that the container has been created, starting the task simply [directs the shim](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/process.go#L124) to [start the process](https://github.com/containerd/containerd/blob/master/runtime/v1/linux/proc/init.go#L258) by calling [_runc_ start](https://github.com/containerd/go-runc/blob/master/runc.go#L181)
+Now that the container has been created, starting the task simply [directs the shim](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/linux/process.go#L124) to [start the process](https://github.com/containerd/containerd/blob/bf5a4246798a6c1b1b0af4810fbb2d53eac91112/runtime/v1/linux/proc/init.go#L258) by calling [_runc_ start](https://github.com/containerd/go-runc/blob/e32098aae3bc878417256292705aedbde3aa3dd8/runc.go#L181)
 
 ## Runc
 
@@ -444,7 +461,7 @@ filesystem.`,
     },
 {% endhighlight %}
 
-When _runc_ [creates](https://github.com/opencontainers/runc/blob/master/create.go) a container it sets up the namespaces, cgroups and even the init process inside the container. At the end of creation, the process is paused [waiting](http://man7.org/linux/man-pages/man2/waitpid.2.html) for a signal to start running.
+When _runc_ [creates](https://github.com/opencontainers/runc/blob/dd50c7e3327b6c264087855f8225cb692046c5f4/create.go) a container it sets up the namespaces, cgroups and even the init process inside the container. At the end of creation, the process is paused [waiting](http://man7.org/linux/man-pages/man2/waitpid.2.html) for a signal to start running.
 
 ### Start
 
@@ -469,11 +486,30 @@ var startCommand = cli.Command{
 }
 {% endhighlight %}
 
-Finally, to [start](https://github.com/opencontainers/runc/blob/master/start.go) the container, _runc_ sends a signal to the paused process to begin executing.
+Finally, to [start](https://github.com/opencontainers/runc/blob/dd50c7e3327b6c264087855f8225cb692046c5f4/start.go) the container, _runc_ sends a signal to the paused process to begin executing.
 
 ## The Visual Summary
 
-Using _containerd's_ architecture [diagram](https://containerd.io/img/architecture.png) as a reference, we can try to visually summarise the entire process of running a container.
+In summary, launching a container using Docker 2019 involves the following steps:
+
+{% highlight text %}
+dockerd is sent POST Containers Create
+    ↳ dockerd finds the requested image
+    ↳ A container object is created and stored for future use
+    ↳ Directories on the file system are setup for use by the container
+dockerd is sent a POST Containers Start
+    ↳ An OCI spec is created for the container
+    ↳ containerd is contacted to create the container
+        ↳ containerd stores the container spec in a database
+    ↳ containerd is contacted to start the container
+        ↳  containerd creates a task for the container
+            ↳  The task uses a shim to call runc create
+        ↳  containerd starts the task
+            ↳  The task uses the shim to call runc start
+        ↳ The shim / containerd continue to monitor the container until completion
+{% endhighlight %}
+
+Using _containerd's_ architecture [diagram](https://containerd.io/img/architecture.png) as a reference, we can represent the entire process visually.
 
 <img src="{{ site.baseurl }}/assets/img/docker-work/visualsummary.png">
 
