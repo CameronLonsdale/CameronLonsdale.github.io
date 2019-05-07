@@ -441,6 +441,10 @@ Now that the container has been created, starting the task simply [directs the s
 
 [_runc_](https://github.com/opencontainers/runc) is a command-line tool for spawning and running containers according to the OCI specification. Performing a similar job to LXC, it abstracts away the Linux kernel calls needed to create a container.
 
+<img src="{{ site.baseurl }}/assets/img/docker-work/runc.png" style="max-width: 300px; display: block; margin-left: auto; margin-right: auto;">
+
+_runc_ is just one implementation of the OCI runtime spec, [many more exist](https://github.com/opencontainers/runtime-spec/blob/master/implementations.md) that can be used to create containers on a variety of systems.
+
 ### Create
 
 {% highlight go %}
