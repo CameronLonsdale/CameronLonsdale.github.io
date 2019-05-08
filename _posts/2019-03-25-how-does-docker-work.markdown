@@ -376,7 +376,11 @@ This is where _containerd_ steps in, first we request a container be created acc
 
 [_containerd_](https://containerd.io/) has confusing terminology around it. It's described as a runtime, but doesn't implement the OCI runtime spec, therefore it's not a runtime in the same way that _runc_ is. _containerd_ is a daemon which oversees the life cycle of containers, using OCI compliant runtimes in order to manage them. As [Michael Crosby](https://www.youtube.com/watch?v=VWuHWfEB6ro) describes it, _containerd_ is a container supervisor.
 
-The interface is simple, all that's required to create a container is its specification and a [bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md) which encodes where the root file system is.
+<img src="{{ site.baseurl }}/assets/img/docker-work/containerd.png" style="display: block; margin-left: auto; margin-right: auto;"> <center><small>(Source: Docker)</small></center>
+
+It's designed to be the this universal base layer for supervising containers, focusing on speed and simplicity.
+
+And it is simple, all that's required to create a container is its specification and a [bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md) which encodes where the root file system is.
 
 ### Create
 
@@ -441,7 +445,7 @@ Now that the container has been created, starting the task simply [directs the s
 
 [_runc_](https://github.com/opencontainers/runc) is a command-line tool for spawning and running containers according to the OCI specification. Performing a similar job to LXC, it abstracts away the Linux kernel calls needed to create a container.
 
-<img src="{{ site.baseurl }}/assets/img/docker-work/runc.png" style="max-width: 300px; display: block; margin-left: auto; margin-right: auto;">
+<img src="{{ site.baseurl }}/assets/img/docker-work/runc.png" style="max-width: 300px; display: block; margin-left: auto; margin-right: auto;"><center><small>(This adorable hamster belongs to runc)</small></center>
 
 _runc_ is just one implementation of the OCI runtime spec, [many more exist](https://github.com/opencontainers/runtime-spec/blob/master/implementations.md) that can be used to create containers on a variety of systems.
 
