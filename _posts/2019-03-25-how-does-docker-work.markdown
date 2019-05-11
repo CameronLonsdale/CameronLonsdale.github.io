@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "[REVIEW COPY] How does Docker work?"
+title:  "How does Docker work?"
 date:   2019-03-25
 ---
 
