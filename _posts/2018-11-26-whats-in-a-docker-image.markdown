@@ -301,3 +301,5 @@ This image from the [docker documentation](https://docs.docker.com/v17.09/engine
 ## Everything else
 
 The full process of starting a container is out of scope for this article. After the file system, the image is not used for much else other than its metadata configuring some of the next steps. For completeness, to make a running container we need to use [_Namespaces_](https://en.wikipedia.org/wiki/Linux_namespaces) to control what the process can see (File system, Processes, Network, Users, etc); Use [_cgroups_](https://en.wikipedia.org/wiki/Cgroups) to control what resources a process can use (Memory, CPU, Network, etc); and _Security Features_ to control what a process can do (Capabilities, AppArmor, SELinux, Seccomp).
+
+To learn exactly how Docker starts a container, check out [_How does Docker work?_](https://cameronlonsdale.com/2019/03/25/how-does-docker-work/)
