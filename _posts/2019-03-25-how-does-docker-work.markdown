@@ -527,13 +527,4 @@ On the surface Docker and its companion projects appear chaotic but underneath t
 
 A big thank you to all the contributors of these projects, especially those who wrote documentation which explained these systems.
 
-I hope this has been helpful in explaining exactly how Docker runs containers. I know that I'll be coming back to read this post many more times in the future.
-
-## Additional Sources
-
-TODO
-
-https://www.youtube.com/watch?v=sK5i-N34im8s
-https://blog.docker.com/2016/04/docker-containerd-integration/
-https://www.youtube.com/watch?v=ZAhzoz2zJj8
-https://blog.docker.com/2017/08/what-is-containerd-runtime/
+I hope this has been helpful in explaining exactly how Docker runs containers. I know that I'll be coming back to use this as a reference many times in the future.
