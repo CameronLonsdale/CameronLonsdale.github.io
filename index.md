@@ -3,7 +3,7 @@ layout: default
 title: Hello
 ---
 
-# Bootstrapped Startup and Small Business Security
+# Bootstrapped Security for Startups and Small Business
 
 Are you a small technology business or startup who wants security advice but are unsure where to begin? Do you want to build good practices before hiring dedicated security staff? Rather than start with a generic pentest, let me assess your current setup, and help you create an improvement roadmap that makes sense for what your business is trying to achieve.
 
@@ -20,7 +20,7 @@ Reach me at consulting@cameronlonsdale.com and let's work together.
 
 I'm a security engineer with over 7 years of experience in Application / Product Security. I've seen how large enterprises like Commonwealth Bank of Australia (CBA) operate, and witnessed smaller companies like Atlassian and Canva change security practices as they grew.
 
-## I need some quick advice
+## Help! I need some quick advice
 
 Have you received an email from someome asking for a security bug bounty (money) in exchange for vulnerability details?
 Or is there a newsworthy hack or vulnerability making the rounds which you need help understanding and figuring out what to do?
