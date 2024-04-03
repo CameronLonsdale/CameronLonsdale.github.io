@@ -3,22 +3,17 @@ layout: default
 title: Hello
 ---
 
+# Bootstrapped Startup and Small Business Security
 
-## An easy to use, minimal, text focused Jekyll theme
+Are you a small business or startup who wants security advice but are unsure where to begin? Do you want to build good practices before hiring dedicated security staff? Rather than start with a generic pentest, let me assess your current setup, and help you create an improvement roadmap that makes sense for what your business is trying to achieve.
 
-[Bear Blog](https://bearblog.dev/) is *"a blogging platform where words matter most"*. 
+What you receive:
+- A threat model of your product, helping you focus on the important parts to protect.
+- A high level code review and pentest looking for insecure practices and vulnerabilities.
+- An Infrastructure, Build and IT Security review with best practice recommendations.
+- Recommendation list 
+- All of this reported however you'd like, a standalone document, Jira tickets or something else.
 
-This is a port of it's theme to Jekyll, with some tweaks. So you can use GitHub Pages to host your blog while getting the same awesome Bear Blog feels.
+## Who am I?
 
-**Stop worrying about the style, focus on your writing.**
-
-- Looks great on *any* device
-- Tiny, optimized, and awesome pages
-- No trackers, ads, or scripts, *did I mention minimal already?*
-- Auto light and dark themes
-- Tag support, to filter blog pages
-- Quick, *15 minute* setup
-- Gallery view for your images
-- Code highlighting
-
-Have a look around, this website is already themed with **jekyllBear**. If you like it, head over to the GitHub [repository](https://github.com/knhash/jekyllBear) for installation instructions.
+I'm a security engineer with over 7 years of experience in Application / Product Security. I've seen how large enterprises like Commonwealth Bank of Australia (CBA) operate, and witnessed smaller companies like Atlassian and Canva change security practices as they grew.
