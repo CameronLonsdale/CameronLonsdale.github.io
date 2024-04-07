@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Hello
+title: Brief
 ---
 
 # Bootstrapped Security for Startups and Small Business

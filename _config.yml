@@ -63,5 +63,5 @@ exclude: [vendor]
   
 
 # Add links for more focus here
-# special_links:
-#   "Search": https://duckduckgo.com
+special_links:
+  "LinkedIn": https://www.linkedin.com/in/cameronlonsdale/
