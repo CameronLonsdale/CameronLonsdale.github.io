@@ -14,7 +14,7 @@ What you receive:
 - Recommendations on a future setup if you're looking to achieve compliance certificates and / or prevent security incidents
 - All of this reported however you'd like, a standalone document, Jira tickets or something else.
 
-Reach me at consulting@cameronlonsdale.com and let's work together.
+Reach me at <span style="color:#8cc2dd">consulting@cameronlonsdale.com</span> and let's work together.
 
 ## Who am I?
 
@@ -25,4 +25,4 @@ I'm a security engineer with over 7 years of experience in Application / Product
 Have you received an email from someome asking for a security bug bounty (money) in exchange for vulnerability details?
 Or is there a newsworthy hack or vulnerability making the rounds which you need help understanding and figuring out what to do?
 
-Reach out to quickhelp@cameronlonsdale.com and I'll do my best to get back to you.
+Reach out to <span style="color:#8cc2dd">quickhelp@cameronlonsdale.com</span> and I'll do my best to get back to you.
