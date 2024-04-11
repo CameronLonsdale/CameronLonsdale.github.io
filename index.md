@@ -14,6 +14,11 @@ What you receive:
 - Recommendations on a future setup if you're looking to achieve compliance certificates and / or prevent security incidents
 - All of this reported however you'd like, a standalone document, Jira tickets or something else.
 
+Your time is important, I would ask for:
+- 1 hour call at the start to discuss focus areas and to conduct a threat model of your product.
+- Asynchronous question & answers, batched at the beginning of a work day and completed in your time.
+- 30 minutes closing call to review and wrap up
+
 Reach me at <span style="color:#8cc2dd">consulting@cameronlonsdale.com</span> and let's work together.
 
 ## Who am I?
