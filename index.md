@@ -23,7 +23,7 @@ Reach me at <span style="color:#8cc2dd">consulting@cameronlonsdale.com</span> an
 
 ## Who am I?
 
-I'm a security engineer with over 7 years of experience in Application / Product Security. I've seen how large enterprises like the Commonwealth Bank of Australia (CBA) operate, and worked at smaller companies like Atlassian and Canva leading security projects as they grew into today's titans.
+Over 5 years of experience as a security engineer at Canva and Atlassian, leading security projects as they matured from startup to today's titans. And additional experience at the Commonwealth Bank of Australia (CBA) operating in an enterprise environment.
 
 ## Help! I need some quick advice
 
