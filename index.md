@@ -5,7 +5,7 @@ title: Brief
 
 # Bootstrapped Security for Startups and Small Business
 
-Are you a small technology business or startup wanting security advice but are unsure where to begin? Do you want to build good practices without hiring dedicated security staff? Rather than start with a generic pentest, let me assess your current setup, and work together to map the shortest path to a more secure product.
+Are you a small technology business or startup wanting security advice but are unsure where to begin? Where you need to focus will change in the first few years as you mature, acquire customers and your risk profile expands. Rather than start with a generic pentest, let me assess your current setup, and work together to map the shortest path to a more secure product.
 
 What you receive:
 - A threat model of your product, helping you focus on the important parts to protect.
