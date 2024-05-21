@@ -5,6 +5,7 @@ title: Cameron Lonsdale Consulting
 description: Bootstrapped security for startups and small business
 # baseurl: "/jekyllBear" # the subpath of your site, e.g. /blog/
 url: "https://cameronlonsdale.com" # the base hostname & protocol for your site
+baseurl: "https://cameronlonsdale.com"
 # host: 0.0.0.0
 
 
@@ -44,7 +45,6 @@ compress_html:
 #     values:
 #       layout: tagged
 
-# baseurl: ""
 #permalink: /blog/:slug
 #timezone: America/New_York
 future: false
