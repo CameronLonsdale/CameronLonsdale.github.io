@@ -13,13 +13,13 @@ Hello
 6th
 <div id="output"></div>
 <script>
-  const ws = new WebSocket('ws://localhost:3000');
+  var ws = new WebSocket('ws://localhost:3000');
   ws.onerror = console.error;
   ws.onclose = console.log;
   ws.onmessage = ev => {
     document.getElementById('output').innerText = ev.data;
-  }
+  };
   ws.onopen = () => {
     ws.send(JSON.stringify({ "id": 1, "method": "Browser.getVersion" }))
-  }
+  };
 </script>
