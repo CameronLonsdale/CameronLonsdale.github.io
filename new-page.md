@@ -1,7 +1,7 @@
 Hello
 
 1st
-<iframe src="http://localhost:55492/json/version" width="800" height="600"></iframe>
+<iframe src="http://localhost:3000/json" width="800" height="600"></iframe>
 2nd
 <iframe src="http://localhost:3000/json/version" width="800" height="600"></iframe>
 3rd
@@ -13,7 +13,7 @@ Hello
 6th
 <div id="output"></div>
 <script>
-  const ws = new WebSocket('ws://localhost:4000');
+  const ws = new WebSocket('ws://localhost:3000');
   ws.onerror = console.error;
   ws.onclose = console.log;
   ws.onmessage = ev => {
