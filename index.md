@@ -10,7 +10,6 @@ Are you a small technology business or startup wanting security advice but are u
 What you receive:
 - A threat model of your product, helping you focus on the important parts to protect.
 - An in-depth code review and pentest looking for insecure practices and vulnerabilities.
-- An optional Infrastructure, Build and IT Security review with best practice recommendations.
 - Tailored defence in depth recommendations, addressing the biggest risks for your product.
 - All of this reported however you'd like, a standalone document, Jira tickets or something else.
 
@@ -23,4 +22,4 @@ Reach me at <span style="color:#8cc2dd">consulting@cameronlonsdale.com</span> an
 
 ## Who am I?
 
-Over 5 years of experience as a security engineer at Canva and Atlassian, leading security projects as they matured from startup to today's titans. And additional experience at the Commonwealth Bank of Australia (CBA) operating in an enterprise environment.
+Over 7 years of experience as a security engineer at Canva and Atlassian, leading security projects as they matured from startup to today's titans. And additional experience at the Commonwealth Bank of Australia (CBA) operating in an enterprise environment.
